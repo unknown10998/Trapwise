@@ -1,0 +1,8 @@
+"use client";
+import Link from "next/link";
+import { useState } from "react";
+import { QuestionCard } from "@/components/QuestionCard";
+import { sampleQuestions } from "@/data/sampleQuestions";
+import type { AnswerChoiceId } from "@/types/question";
+const question = sampleQuestions.find((item) => item.id === "systems-nonlinear-011")!;
+export default function FollowUpPage() { const [choice, setChoice] = useState<AnswerChoiceId | null>(null); const [complete, setComplete] = useState(false); const correct = choice === question.correctAnswer; return <main className="mx-auto max-w-4xl px-4 py-10"><p className="text-sm font-semibold uppercase text-indigo-700">Personalized follow-up · Local rule-based</p><h1 className="mt-2 text-3xl font-bold">Check the value you were asked to find.</h1><p className="mt-3 text-slate-600">This follow-up is selected from the verified local bank using your Mistake Twin pattern. It is not AI-generated.</p><div className="mt-6"><QuestionCard question={question} selectedChoice={choice} onSelectChoice={setChoice} disabled={complete} /></div>{!complete ? <button disabled={!choice} onClick={() => setComplete(true)} className="mt-6 rounded-md bg-emerald-600 px-5 py-3 font-semibold text-white disabled:bg-slate-300">Check follow-up</button> : <section className={`mt-6 rounded-xl border p-5 ${correct ? "border-emerald-200 bg-emerald-50" : "border-amber-200 bg-amber-50"}`} aria-live="polite"><h2 className="text-xl font-bold">{correct ? "Pattern checked — +30 demo XP" : "Review the requested value"}</h2><p className="mt-2 text-slate-700">{question.explanation}</p><Link href="/trap-forge" className="mt-4 inline-flex rounded-md bg-indigo-700 px-4 py-2 font-semibold text-white">Continue to Trap Forge</Link></section>}</main>; }

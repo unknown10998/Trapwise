@@ -1,0 +1,105 @@
+"use client";
+
+import Link from "next/link";
+import { useEffect, useState } from "react";
+import { ProgressBar } from "@/components/ProgressBar";
+import { QuestionCard } from "@/components/QuestionCard";
+import { sampleQuestions } from "@/data/sampleQuestions";
+import { buildDailyProgressRecord, createDailyPracticeSession, getStreak, localDate, readDailySession, readProgressHistory, saveDailySession, saveProgressHistory } from "@/lib/dailyPractice";
+import { readFromStorage } from "@/lib/storage";
+import { queueProgressForSync } from "@/lib/cloudSync";
+import type { AnswerRecord, AnswerChoiceId, Confidence } from "@/types/question";
+import type { DailyAnswer, DailyPracticeSession, ProgressHistory } from "@/types/progress";
+
+type SavedDiagnostic = { records: AnswerRecord[] };
+const confidenceOptions: { value: Exclude<Confidence, null>; label: string }[] = [
+  { value: "guessing", label: "Guessing" }, { value: "unsure", label: "Unsure" }, { value: "mostly_sure", label: "Mostly Sure" }, { value: "certain", label: "Certain" },
+];
+
+function getQuestion(id: string) { return sampleQuestions.find((question) => question.id === id); }
+
+export default function DailyPage() {
+  const [session, setSession] = useState<DailyPracticeSession | null>(null);
+  const [history, setHistory] = useState<ProgressHistory>({ version: 1, sessions: [] });
+  const [index, setIndex] = useState(0);
+  const [choice, setChoice] = useState<AnswerChoiceId | null>(null);
+  const [confidence, setConfidence] = useState<Confidence>(null);
+  const [showFeedback, setShowFeedback] = useState(false);
+
+  useEffect(() => {
+    const frame = window.requestAnimationFrame(() => {
+      const currentHistory = readProgressHistory();
+      const existing = readDailySession();
+      const today = localDate();
+      const diagnostic = readFromStorage<SavedDiagnostic>("adaptive-diagnostic", { records: [] });
+      const nextSession = existing?.date === today ? existing : createDailyPracticeSession({ diagnosticRecords: diagnostic.records, history: currentHistory, date: today });
+      if (nextSession !== existing) saveDailySession(nextSession);
+      setHistory(currentHistory); setSession(nextSession); setIndex(nextSession.answers.length);
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, []);
+
+  if (!session) return <main className="mx-auto max-w-4xl px-4 py-10 sm:px-6 lg:px-8"><p className="text-slate-600">Preparing today&apos;s practice…</p></main>;
+  const question = getQuestion(session.selectedQuestionIds[index]);
+  const streak = getStreak(history);
+  if (session.isComplete || !question) return <DailyComplete session={session} history={history} />;
+
+  function submitAnswer() {
+    if (!session || !choice || !question) return;
+    const answer: DailyAnswer = {
+      questionId: question.id, selectedChoice: choice, correctChoice: question.correctAnswer, isCorrect: choice === question.correctAnswer,
+      confidence, mistakeCategory: choice === question.correctAnswer ? null : question.mistakeCategoryByChoice[choice] ?? "unknown",
+      difficultyLevel: question.difficultyLevel, primarySkill: question.primarySkill,
+      isVisual: Boolean(question.visual), visualCategory: question.visual?.category,
+    };
+    const updated = { ...session, answers: [...session.answers, answer] };
+    saveDailySession(updated); setSession(updated); setShowFeedback(true);
+  }
+
+  function nextQuestion() {
+    if (!session) return;
+    if (index + 1 < session.selectedQuestionIds.length) { setIndex(index + 1); setChoice(null); setConfidence(null); setShowFeedback(false); return; }
+    const completed = { ...session, isComplete: true };
+    const record = buildDailyProgressRecord(completed);
+    const updatedHistory = history.sessions.some((item) => item.sessionId === record.sessionId) ? history : { ...history, sessions: [...history.sessions, record] };
+    queueProgressForSync(record); saveDailySession(completed); saveProgressHistory(updatedHistory); setHistory(updatedHistory); setSession(completed);
+  }
+
+  const answer = session.answers.at(-1);
+  return (
+    <main className="mx-auto max-w-4xl px-4 py-10 sm:px-6 lg:px-8">
+      <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div><p className="text-sm font-semibold uppercase tracking-normal text-emerald-700">{session.date}</p><h1 className="mt-2 text-3xl font-bold text-slate-950">Daily Practice</h1></div>
+          <div className="rounded-xl bg-emerald-50 px-4 py-3 text-right"><p className="text-xs font-semibold uppercase text-emerald-800">Current streak</p><p className="text-2xl font-bold text-emerald-950">{streak.active} day{streak.active === 1 ? "" : "s"}</p></div>
+        </div>
+        <p className="mt-4 leading-7 text-slate-600">{session.reason}</p>
+        <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4"><Info label="Current mastery" value={String(session.startingMastery)} /><Info label="Previous mastery" value={String(history.sessions.at(-1)?.masteryAfter ?? session.startingMastery)} /><Info label="Today&apos;s target" value={session.targetSkill} /><Info label="Mistake Twin pattern" value={session.targetMistakeCategory?.replaceAll("_", " ") ?? "Building evidence"} /></div>
+        <div className="mt-6"><div className="mb-2 flex justify-between text-sm text-slate-600"><span>Daily question {index + 1}</span><span>{session.answers.length} answered</span></div><ProgressBar current={index + 1} total={session.selectedQuestionIds.length} /></div>
+      </div>
+
+      <div className="mt-6"><QuestionCard question={question} selectedChoice={choice} onSelectChoice={setChoice} disabled={showFeedback} /></div>
+      {!showFeedback ? <>
+        <section className="mt-5 rounded-lg border border-slate-200 bg-white p-5"><h2 className="font-semibold text-slate-950">Confidence (optional)</h2><div className="mt-3 grid gap-2 sm:grid-cols-4">{confidenceOptions.map((option) => <button key={option.value} type="button" onClick={() => setConfidence(option.value)} className={`rounded-md border px-3 py-2 text-sm font-medium ${confidence === option.value ? "border-emerald-600 bg-emerald-50" : "border-slate-200"}`}>{option.label}</button>)}</div></section>
+        <button type="button" onClick={submitAnswer} disabled={!choice} className="mt-6 inline-flex min-h-11 items-center justify-center rounded-md bg-emerald-600 px-5 py-2 font-semibold text-white disabled:cursor-not-allowed disabled:bg-slate-300">Check Answer</button>
+      </> : <section className={`mt-5 rounded-lg border p-5 ${answer?.isCorrect ? "border-emerald-200 bg-emerald-50" : "border-amber-200 bg-amber-50"}`} aria-live="polite">
+        <p className="font-bold text-slate-950">{answer?.isCorrect ? "Nice work — you got it." : `The correct answer is ${question.correctAnswer}.`}</p>
+        <p className="mt-2 leading-7 text-slate-700">{question.explanation}</p><p className="mt-2 text-sm leading-6 text-slate-600"><strong>Main trap:</strong> {question.mainTrap}</p>
+        {!answer?.isCorrect && <p className="mt-2 text-sm text-slate-600">Pattern noticed: {answer?.mistakeCategory?.replaceAll("_", " ")}.</p>}
+        <button type="button" onClick={nextQuestion} className="mt-5 inline-flex min-h-11 items-center justify-center rounded-md bg-emerald-600 px-5 py-2 font-semibold text-white">{index + 1 === session.selectedQuestionIds.length ? "Finish Daily Practice" : "Next Question"}</button>
+      </section>}
+      <Link href="/progress" className="mt-6 inline-flex text-sm font-semibold text-emerald-700 hover:underline">View your progress</Link>
+    </main>
+  );
+}
+
+function DailyComplete({ session, history }: { session: DailyPracticeSession; history: ProgressHistory }) {
+  const record = history.sessions.find((item) => item.sessionId === session.sessionId) ?? buildDailyProgressRecord(session);
+  const message = record.correctedMistakes > 0 ? "You defeated part of your most common trap today." : record.masteryChange > 0 ? "Your practice gave Trapwise stronger evidence of growth." : "Your mastery stayed steady while Trapwise gathers more evidence.";
+  const highestDifficulty = Math.max(...session.answers.map((answer) => answer.difficultyLevel));
+  const confidenceAnswers = session.answers.filter((answer) => answer.confidence !== null);
+  const confidenceAccuracy = confidenceAnswers.length ? Math.round((confidenceAnswers.filter((answer) => answer.isCorrect).length / confidenceAnswers.length) * 100) : null;
+  return <main className="mx-auto max-w-4xl px-4 py-10 sm:px-6 lg:px-8"><p className="text-sm font-semibold uppercase text-emerald-700">Daily practice complete</p><h1 className="mt-2 text-3xl font-bold text-slate-950">Small practice, real momentum.</h1><p className="mt-4 text-lg text-slate-600">{message}</p><div className="mt-7 grid gap-3 sm:grid-cols-2 lg:grid-cols-4"><Info label="Daily score" value={`${record.accuracy}%`} /><Info label="Questions correct" value={`${record.correctAnswers}/${record.questionsAnswered}`} /><Info label="Starting mastery" value={String(record.masteryBefore)} /><Info label="Ending mastery" value={String(record.masteryAfter)} /><Info label="Mastery change" value={`${record.masteryChange >= 0 ? "+" : ""}${record.masteryChange}`} /><Info label="Skill practiced" value={session.targetSkill} /><Info label="Pattern targeted" value={session.targetMistakeCategory?.replaceAll("_", " ") ?? "Building evidence"} /><Info label="Mistakes corrected" value={String(record.correctedMistakes)} /><Info label="Highest level completed" value={`Level ${highestDifficulty}`} /><Info label="Confidence accuracy" value={confidenceAccuracy === null ? "Not enough data" : `${confidenceAccuracy}%`} /></div><section className="mt-6 rounded-xl border border-slate-200 bg-white p-5"><h2 className="font-bold text-slate-950">Updated Mistake Twin</h2><p className="mt-2 text-slate-600">Tomorrow, focus on {record.correctedMistakes > 0 ? "keeping this corrected pattern strong with one slightly harder question." : `${session.targetSkill.toLowerCase()} with deliberate setup checks before calculating.`}</p></section><div className="mt-8 flex gap-3"><Link href="/progress" className="rounded-md bg-emerald-600 px-4 py-2 font-semibold text-white">View Progress</Link><Link href="/" className="rounded-md border border-slate-300 px-4 py-2 font-semibold text-slate-800">Home</Link></div></main>;
+}
+
+function Info({ label, value }: { label: string; value: string }) { return <div className="rounded-lg border border-slate-200 bg-slate-50 p-3"><p className="text-xs font-semibold uppercase text-slate-500">{label}</p><p className="mt-1 font-bold text-slate-950">{value}</p></div>; }

@@ -1,0 +1,167 @@
+"use client";
+
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { ProgressBar } from "@/components/ProgressBar";
+import { QuestionCard } from "@/components/QuestionCard";
+import { fixedDiagnosticQuestions, sampleQuestions } from "@/data/sampleQuestions";
+import { estimateMastery, getAdaptiveDecision, getMistakeCounts, getSkillPerformance, type DiagnosticStopReason } from "@/lib/adaptiveEngine";
+import { buildDiagnosticReport } from "@/lib/diagnosticReport";
+import { localDate, readProgressHistory, saveProgressHistory } from "@/lib/dailyPractice";
+import { writeToStorage } from "@/lib/storage";
+import type { AnswerChoiceId, AnswerRecord, Confidence, SATQuestion } from "@/types/question";
+
+type SavedDiagnostic = { records: AnswerRecord[]; stopReason: DiagnosticStopReason | null };
+
+const confidenceOptions: { value: Exclude<Confidence, null>; label: string }[] = [
+  { value: "guessing", label: "Guessing" },
+  { value: "unsure", label: "Unsure" },
+  { value: "mostly_sure", label: "Mostly Sure" },
+  { value: "certain", label: "Certain" },
+];
+
+export default function DiagnosticPage() {
+  const router = useRouter();
+  const [selectedChoice, setSelectedChoice] = useState<AnswerChoiceId | null>(null);
+  const [confidence, setConfidence] = useState<Confidence>(null);
+  const [records, setRecords] = useState<AnswerRecord[]>([]);
+  const [question, setQuestion] = useState<SATQuestion>(fixedDiagnosticQuestions[0]);
+  const [selectionNote, setSelectionNote] = useState("Start with five foundation-to-challenge questions.");
+
+  const questionNumber = records.length + 1;
+  const wasAdaptive = records.length >= fixedDiagnosticQuestions.length;
+
+  function handleSubmit() {
+    if (!selectedChoice) return;
+
+    const masteryBefore = estimateMastery(records);
+    const isCorrect = selectedChoice === question.correctAnswer;
+    const nextRecord: AnswerRecord = {
+      questionId: question.id,
+      selectedChoice,
+      correctChoice: question.correctAnswer,
+      isCorrect,
+      mistakeCategory: isCorrect ? null : question.mistakeCategoryByChoice[selectedChoice] ?? "unknown",
+      difficultyLevel: question.difficultyLevel,
+      primarySkill: question.primarySkill,
+      confidence,
+      responseOrder: questionNumber,
+      wasAdaptive,
+      masteryBefore,
+      masteryAfter: 0,
+      isVisual: Boolean(question.visual),
+      visualCategory: question.visual?.category,
+    };
+    const provisionalRecords = [...records, nextRecord];
+    nextRecord.masteryAfter = estimateMastery(provisionalRecords);
+    const updatedRecords = [...records, nextRecord];
+    setRecords(updatedRecords);
+    writeToStorage<SavedDiagnostic>("adaptive-diagnostic", { records: updatedRecords, stopReason: null });
+
+    if (updatedRecords.length < fixedDiagnosticQuestions.length) {
+      setQuestion(fixedDiagnosticQuestions[updatedRecords.length]);
+      setSelectionNote("Continue through the fixed diagnostic sequence.");
+    } else {
+      const decision = getAdaptiveDecision({
+        allQuestions: sampleQuestions,
+        questionsAlreadyAnswered: updatedRecords.map((record) => record.questionId),
+        answerHistory: updatedRecords,
+        currentMastery: nextRecord.masteryAfter,
+        mistakeCategoryCounts: getMistakeCounts(updatedRecords),
+        skillPerformanceCounts: getSkillPerformance(updatedRecords),
+      });
+      if (decision.kind === "end") {
+        writeToStorage<SavedDiagnostic>("adaptive-diagnostic", { records: updatedRecords, stopReason: decision.reason });
+        const report = buildDiagnosticReport(updatedRecords, decision.reason);
+        const sessionId = `diagnostic-${localDate()}-${updatedRecords[0]?.questionId ?? "session"}`;
+        const history = readProgressHistory();
+        if (!history.sessions.some((session) => session.sessionId === sessionId)) {
+          const difficultyPerformance = updatedRecords.reduce<Record<number, { correct: number; total: number }>>((result, record) => {
+            const current = result[record.difficultyLevel] ?? { correct: 0, total: 0 };
+            current.total += 1; if (record.isCorrect) current.correct += 1; result[record.difficultyLevel] = current; return result;
+          }, {});
+          const confidencePerformance = updatedRecords.reduce<Record<string, { correct: number; total: number }>>((result, record) => {
+            const key = record.confidence ?? "not_selected"; const current = result[key] ?? { correct: 0, total: 0 };
+            current.total += 1; if (record.isCorrect) current.correct += 1; result[key] = current; return result;
+          }, {});
+          const visualAnswers = updatedRecords.filter((record) => record.isVisual);
+          const visualPerformance = visualAnswers.reduce<Record<string, { correct: number; total: number }>>((result, record) => { const key = record.visualCategory ?? "other"; const current = result[key] ?? { correct: 0, total: 0 }; current.total += 1; if (record.isCorrect) current.correct += 1; result[key] = current; return result; }, {});
+          saveProgressHistory({ ...history, sessions: [...history.sessions, {
+            sessionId, sessionType: "diagnostic", date: localDate(), questionsAnswered: updatedRecords.length, correctAnswers: report.correct,
+            accuracy: report.accuracy, masteryBefore: updatedRecords[0]?.masteryBefore ?? 50, masteryAfter: report.mastery,
+            masteryChange: report.mastery - (updatedRecords[0]?.masteryBefore ?? 50), strongestSkill: report.strongestSkill, weakestSkill: report.weakestSkill,
+            dominantMistake: report.mostCommonMistake, difficultyPerformance, confidencePerformance, correctedMistakes: 0, questionIds: updatedRecords.map((record) => record.questionId), visualPerformance: { answered: visualAnswers.length, correct: visualAnswers.filter((record) => record.isCorrect).length, visualMisinterpretations: visualAnswers.filter((record) => record.mistakeCategory === "visual_misinterpretation").length, byCategory: visualPerformance },
+          }] });
+        }
+        router.push("/results");
+        return;
+      }
+      setQuestion(decision.question);
+      setSelectionNote(decision.reason);
+      if (process.env.NODE_ENV !== "production") {
+        console.info("Trapwise adaptive selection", decision);
+      }
+    }
+
+    setSelectedChoice(null);
+    setConfidence(null);
+  }
+
+  return (
+    <main className="mx-auto max-w-4xl px-4 py-10 sm:px-6 lg:px-8">
+      <div className="mb-8">
+        <p className="text-sm font-semibold uppercase tracking-normal text-emerald-700">{question.subject}</p>
+        <h1 className="mt-2 text-3xl font-bold text-slate-950">Adaptive Diagnostic</h1>
+        <p className="mt-2 text-sm leading-6 text-slate-600">
+          {wasAdaptive ? `Question ${questionNumber} • Adaptive Practice` : `Question ${questionNumber} • Diagnostic Foundations`}
+        </p>
+        <div className="mt-5">
+          <div className="mb-2 flex items-center justify-between text-sm text-slate-600">
+            <span>Estimated progress</span>
+            <span>{wasAdaptive ? "Building your topic profile" : "Establishing your starting point"}</span>
+          </div>
+          <ProgressBar current={questionNumber} total={15} />
+        </div>
+      </div>
+
+      <QuestionCard question={question} selectedChoice={selectedChoice} onSelectChoice={setSelectedChoice} />
+
+      <section className="mt-5 rounded-lg border border-slate-200 bg-white p-5">
+        <h2 className="text-base font-semibold text-slate-950">How confident are you?</h2>
+        <p className="mt-1 text-sm leading-6 text-slate-600">Optional. This helps Trapwise choose an appropriate next challenge.</p>
+        <div className="mt-4 grid gap-2 sm:grid-cols-4">
+          {confidenceOptions.map((option) => (
+            <button
+              key={option.value}
+              type="button"
+              aria-pressed={confidence === option.value}
+              onClick={() => setConfidence(option.value)}
+              className={`rounded-md border px-3 py-2 text-sm font-medium ${confidence === option.value ? "border-emerald-600 bg-emerald-50 text-emerald-900" : "border-slate-200 text-slate-700 hover:bg-slate-50"}`}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+      </section>
+
+      <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-between">
+        <Link href="/" className="inline-flex min-h-11 items-center justify-center rounded-md border border-slate-300 px-4 py-2 font-semibold text-slate-800 hover:bg-slate-50">
+          Exit Diagnostic
+        </Link>
+        <button
+          type="button"
+          onClick={handleSubmit}
+          className="inline-flex min-h-11 items-center justify-center rounded-md bg-emerald-600 px-4 py-2 font-semibold text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+          disabled={!selectedChoice}
+        >
+          Submit Answer
+        </button>
+      </div>
+
+      {process.env.NODE_ENV !== "production" && (
+        <p className="mt-6 text-xs text-slate-400">Developer note: {selectionNote}</p>
+      )}
+    </main>
+  );
+}

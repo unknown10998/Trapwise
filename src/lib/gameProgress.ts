@@ -1,0 +1,5 @@
+import type { ProgressRecord } from "@/types/progress";
+export type LevelProgress = { level: number; currentXp: number; nextLevelXp: number; progressPercent: number };
+const thresholds = [0, 200, 500, 900, 1400, 2000, 2700, 3500, 4400, 5400];
+export function getLevelProgress(totalXp: number): LevelProgress { const level = Math.max(1, thresholds.findIndex((threshold, index) => totalXp < (thresholds[index + 1] ?? Infinity)) + 1); const start = thresholds[level - 1] ?? thresholds.at(-1)!; const next = thresholds[level] ?? start + 1200; return { level, currentXp: totalXp, nextLevelXp: next, progressPercent: Math.round(((totalXp - start) / (next - start)) * 100) }; }
+export function xpForSession(record: ProgressRecord): number { const base = record.sessionType === "diagnostic" ? 100 : record.sessionType === "daily" ? 40 : 30; const correctness = record.correctAnswers * 10; const improvement = Math.max(0, record.masteryChange) * 2; const hard = Object.entries(record.difficultyPerformance).reduce((sum, [level, value]) => sum + (Number(level) >= 4 ? value.correct * 5 : 0), 0); return Math.min(180, base + correctness + improvement + hard); }
