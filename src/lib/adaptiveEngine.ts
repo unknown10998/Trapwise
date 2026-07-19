@@ -123,6 +123,7 @@ export function selectAdaptiveQuestion(allQuestions: SATQuestion[], records: Ans
   const recentLetters = recent.map((record) => record.correctChoice);
   const mistake = dominantMistake(records);
   const targetSkill = latest && !latest.isCorrect ? latest.primarySkill : "";
+  const visualIsDue = recent.length === 3 && recent.every((record) => !record.isVisual);
 
   const scored = available.map((question) => {
     let score = 100 - Math.abs(question.difficultyLevel - target) * 20;
@@ -138,6 +139,19 @@ export function selectAdaptiveQuestion(allQuestions: SATQuestion[], records: Ans
     return { question, score };
   });
   scored.sort((left, right) => right.score - left.score || left.question.id.localeCompare(right.question.id));
+  if (visualIsDue) {
+    const visualChoice = scored.find(({ question }) => Boolean(question.visual));
+    if (visualChoice) {
+      return {
+        kind: "next",
+        question: visualChoice.question,
+        targetDifficulty: target,
+        targetSkill: targetSkill || visualChoice.question.primarySkill,
+        dominantMistake: mistake,
+        reason: "It adds a visual question after three text-only questions while staying within the approved adaptive bank.",
+      };
+    }
+  }
   const selected = scored[0]?.question;
   if (!selected) return { kind: "end", reason: "no_safe_question_available", explanation: "No safe fallback question was available." };
   return {

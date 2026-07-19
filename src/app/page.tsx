@@ -3,11 +3,13 @@ import { MistakeTwinCard } from "@/components/MistakeTwinCard";
 import { SubjectCard } from "@/components/SubjectCard";
 import { DailyPracticeCard } from "@/components/DailyPracticeCard";
 import { DemoControls } from "@/components/DemoControls";
+import { HomeLearningStatus } from "@/components/HomeLearningStatus";
 
 const steps = [
-  "Answer a diagnostic question",
-  "Discover the trap behind your mistake",
-  "Practice against your Mistake Twin",
+  ["Practice", "Start with a diagnostic or a short daily set."],
+  ["Detect", "See the distractor pattern behind a missed answer."],
+  ["Train", "Use a verified follow-up to practice the exact weakness."],
+  ["Weaken", "Confirm the pattern in Trap Forge and track the change."],
 ];
 
 export default function Home() {
@@ -36,6 +38,12 @@ export default function Home() {
               >
                 View Sample Results
               </Link>
+              <Link
+                href="/progress#question-formats"
+                className="inline-flex min-h-12 items-center justify-center rounded-md border border-slate-300 px-5 py-3 font-semibold text-slate-800 hover:bg-slate-50"
+              >
+                Question Formats
+              </Link>
             </div>
             <DemoControls />
           </div>
@@ -58,6 +66,10 @@ export default function Home() {
       </section>
 
       <section className="mx-auto max-w-6xl px-4 py-12 sm:px-6 lg:px-8">
+        <HomeLearningStatus />
+      </section>
+
+      <section className="mx-auto max-w-6xl px-4 pb-12 sm:px-6 lg:px-8">
         <DailyPracticeCard />
       </section>
 
@@ -84,13 +96,14 @@ export default function Home() {
             <p className="text-sm font-semibold uppercase tracking-normal text-emerald-700">How it works</p>
             <h2 className="mt-3 text-3xl font-bold text-slate-950">Practice the pattern, not just the question.</h2>
           </div>
-          <ol className="mt-8 grid gap-4 md:grid-cols-3">
-            {steps.map((step, index) => (
-              <li key={step} className="rounded-lg border border-slate-200 bg-slate-50 p-5">
+          <ol className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {steps.map(([title, detail], index) => (
+              <li key={title} className="rounded-lg border border-slate-200 bg-slate-50 p-5">
                 <span className="flex h-9 w-9 items-center justify-center rounded-md bg-emerald-600 text-sm font-bold text-white">
                   {index + 1}
                 </span>
-                <p className="mt-4 text-lg font-semibold text-slate-950">{step}</p>
+                <p className="mt-4 text-lg font-semibold text-slate-950">{title}</p>
+                <p className="mt-2 text-sm leading-6 text-slate-600">{detail}</p>
               </li>
             ))}
           </ol>

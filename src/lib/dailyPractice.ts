@@ -72,6 +72,21 @@ function weakestSkill(records: AnswerRecord[]) {
   return skills.sort(([, left], [, right]) => (left.correct / left.total) - (right.correct / right.total))[0]?.[0] ?? "Basic substitution";
 }
 
+function includeVisualVariety(selected: SATQuestion[], rankedQuestions: SATQuestion[], targetVisualCount: number) {
+  const next = [...selected];
+  for (const visualQuestion of rankedQuestions) {
+    if (next.filter((question) => question.visual).length >= targetVisualCount) break;
+    if (!visualQuestion.visual || next.some((question) => question.id === visualQuestion.id)) continue;
+    let replacementIndex = -1;
+    for (let index = next.length - 1; index >= 0; index -= 1) {
+      if (!next[index].visual) { replacementIndex = index; break; }
+    }
+    if (replacementIndex === -1) break;
+    next[replacementIndex] = visualQuestion;
+  }
+  return next;
+}
+
 export type DailySessionInput = {
   diagnosticRecords: AnswerRecord[];
   history: ProgressHistory;
@@ -105,14 +120,16 @@ export function createDailyPracticeSession(input: DailySessionInput): DailyPract
     if (question.visual && visualCount >= 2) return result;
     return [...result, question];
   }, []).slice(0, count);
+  const targetVisualCount = Math.min(count === 5 ? 2 : 1, sorted.filter((question) => question.visual).length);
+  const selectedWithVisualVariety = includeVisualVariety(selected, sorted, targetVisualCount);
   return {
     sessionId: `daily-${input.date}-${hash(`${targetSkill}-${mastery}`).toString(36)}`,
     date: input.date,
-    selectedQuestionIds: selected.map((question) => question.id),
+    selectedQuestionIds: selectedWithVisualVariety.map((question) => question.id),
     targetSkill,
     targetMistakeCategory,
     startingMastery: mastery,
-    reason: `Today targets ${targetSkill.toLowerCase()}${targetMistakeCategory ? ` and ${targetMistakeCategory.replaceAll("_", "-")} mistakes` : " to confirm your current level"}.`,
+    reason: `Today targets ${targetSkill.toLowerCase()}${targetMistakeCategory ? ` and ${targetMistakeCategory.replaceAll("_", "-")} mistakes` : " to confirm your current level"}${targetVisualCount ? ` and includes ${targetVisualCount} visual question${targetVisualCount === 1 ? "" : "s"}` : ""}.`,
     includesAiQuestion: false,
     answers: [],
     isComplete: false,

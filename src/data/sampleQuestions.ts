@@ -116,7 +116,8 @@ const bank: SATQuestion[] = [
   question({ id:"visual-035",primarySkill:"Experimental variables",difficultyLevel:5,difficulty:difficultyLabels[5],questionText:"In the experiment diagram, which change would make the test least fair?",answerChoices:[{id:"A",text:"Use the same seed type in both trays."},{id:"B",text:"Give both trays the same amount of water."},{id:"C",text:"Change both light level and soil type at once."},{id:"D",text:"Measure height after the same number of days."}],correctAnswer:"C",explanation:"A fair test changes one variable at a time. Changing light and soil together makes it impossible to identify the cause.",fastStrategy:"Look for the choice that changes more than the intended variable.",mainTrap:"Thinking more changes always make an experiment stronger.",prerequisiteSkills:["experimental design"],tags:["scientific_diagram","visual"],mistakeCategories:{A:"visual_misinterpretation",B:"visual_misinterpretation",D:"rushed_answer"},visual:{kind:"diagram",category:"scientific_diagram",alt:"Experiment diagram showing a control tray and a test tray connected by an arrow labeled light level.",caption:"Both trays are compared after the same growing period.",diagram:"experiment",labels:{variable:"light level"}}}),
 ];
 
-export const fixedDiagnosticQuestions = bank.slice(0, 5);
+/** One early graph keeps the five-question foundation diagnostic visually varied. */
+export const fixedDiagnosticQuestions = [bank[0], bank[1], bank.find((question) => question.id === "visual-026")!, bank[2], bank[3]];
 export const sampleQuestions = bank;
 /** Lightweight scenario check for the reviewed in-repo bank; CI/type checks can import it without a test runner. */
 export const visualQuestionValidationErrors = bank.flatMap((item) => validateQuestionVisual(item).errors.map((error) => `${item.id}: ${error}`));

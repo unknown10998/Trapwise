@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-const answers = ["C", "A", "B", "A", "C"];
+const answers = ["C", "A", "C", "B", "A"];
 
 test("Judge Demo completes deterministically without duplicate reward after refresh", async ({ page }, testInfo) => {
   const consoleErrors = [];
@@ -32,13 +32,14 @@ test("Judge Demo completes deterministically without duplicate reward after refr
   await page.screenshot({ path: testInfo.outputPath("pattern-weakened.png"), fullPage: true });
 
   await page.getByRole("link", { name: "Continue to Trap Forge" }).click();
-  await page.getByRole("radio", { name: "Solved for x instead of the requested y-value" }).check();
-  await page.getByRole("button", { name: "Evaluate trap" }).click();
-  await expect(page.getByText("Trap recognition improved", { exact: false })).toBeVisible();
+  await page.locator("#distractor").fill("2");
+  await page.locator("#forge-explanation").fill("The student found x = 2 and stopped before finding y.");
+  await page.getByRole("button", { name: "Check my distractor" }).click();
+  await expect(page.getByText("Distractor forged", { exact: false })).toBeVisible();
   await page.screenshot({ path: testInfo.outputPath("trap-forge-evaluation.png"), fullPage: true });
 
   await page.reload();
-  await expect(page.getByText("Trap recognition improved", { exact: false })).toBeVisible();
+  await expect(page.getByText("Distractor forged", { exact: false })).toBeVisible();
   await page.getByRole("link", { name: "See before-and-after impact" }).click();
   await expect(page.getByText("Pattern weakened", { exact: false })).toBeVisible();
   await page.getByRole("link", { name: "View progress" }).click();
