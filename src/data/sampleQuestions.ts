@@ -18,9 +18,23 @@ const difficultyLabels: Record<DifficultyLevel, Difficulty> = {
 
 function question(input: QuestionInput): SATQuestion {
   const distractorAnalysis = input.answerChoices.reduce<Record<AnswerChoiceId, string>>((analysis, choice) => {
+    const category = input.mistakeCategories?.[choice.id];
+    const categoryReason: Partial<Record<MistakeCategory, string>> = {
+      misread_question: "This choice fits a nearby value but misses a condition or the exact quantity requested.",
+      wrong_operation: "This choice comes from combining the known values with an incorrect operation.",
+      wrong_formula: "This choice reflects applying a related rule that does not match this relationship.",
+      calculation_error: "This choice is consistent with a small arithmetic or sign error after a reasonable setup.",
+      solved_wrong_value: "This choice is a meaningful intermediate value, not the final quantity the question asks for.",
+      tempting_distractor: "This choice is a plausible intermediate result that can look finished too soon.",
+      weak_text_evidence: "This choice reaches beyond the evidence that is actually provided.",
+      vocabulary_confusion: "This choice relies on a word meaning that does not fit the local context.",
+      rushed_answer: "This choice can result from answering before checking the final condition.",
+      visual_misinterpretation: "This choice is consistent with misreading a label, scale, point, or relationship in the visual.",
+      unknown: "This choice represents a plausible but unverified misconception.",
+    };
     analysis[choice.id] = choice.id === input.correctAnswer
       ? "Correct answer."
-      : "This choice represents a plausible incomplete calculation or misconception in the setup.";
+      : categoryReason[category ?? "unknown"]!;
     return analysis;
   }, { A: "", B: "", C: "", D: "" });
 

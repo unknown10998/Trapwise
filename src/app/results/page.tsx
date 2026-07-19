@@ -4,9 +4,12 @@ import Link from "next/link";
 import { useSyncExternalStore } from "react";
 import { MistakeTwinCard } from "@/components/MistakeTwinCard";
 import { MistakeAnalysis } from "@/components/MistakeAnalysis";
+import { MistakeTwinReveal } from "@/components/MistakeTwinReveal";
 import { sampleQuestions } from "@/data/sampleQuestions";
 import { buildDiagnosticReport, getQuestionReview } from "@/lib/diagnosticReport";
 import { writeToStorage } from "@/lib/storage";
+import { buildMistakeTwinProfile } from "@/lib/mistakeTwinEngine";
+import { patternStrength } from "@/lib/mistakeTwinProgress";
 import type { AnswerRecord } from "@/types/question";
 import type { DiagnosticStopReason } from "@/lib/adaptiveEngine";
 
@@ -37,6 +40,10 @@ export default function ResultsPage() {
 
   const report = buildDiagnosticReport(saved.records, saved.stopReason ?? "no_safe_question_available");
   const review = getQuestionReview(saved.records, sampleQuestions);
+  const twinProfile = buildMistakeTwinProfile(saved.records);
+  const dominantCategory = twinProfile.dominantMistake === "none" ? "unknown" : twinProfile.dominantMistake;
+  const strength = patternStrength(saved.records, dominantCategory);
+  const dominantDifficulty = Math.max(1, ...saved.records.filter((record) => record.mistakeCategory === dominantCategory).map((record) => record.difficultyLevel));
 
   return (
     <main className="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
@@ -60,6 +67,8 @@ export default function ResultsPage() {
         <ResultStat label="Most common mistake" value={report.mostCommonMistake} />
         <ResultStat label="Why it ended" value={report.stopReason} />
       </section>
+
+      <MistakeTwinReveal profile={twinProfile} strength={strength} dominantDifficulty={dominantDifficulty} />
 
       <section className="mt-8 grid gap-4 lg:grid-cols-[0.9fr_1.1fr]">
         <MistakeTwinCard

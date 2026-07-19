@@ -21,9 +21,7 @@ export default function Home() {
               See the trap. Learn the pattern. Beat the test.
             </h1>
             <p className="mt-6 max-w-2xl text-lg leading-8 text-slate-600">
-              Trapwise is an adaptive SAT-style practice app that helps students understand why
-              they miss questions, recognize recurring mistake patterns, and practice with more
-              intention.
+              Most test-prep apps show students what they got wrong. Trapwise discovers why by building a Mistake Twin that learns the traps a student falls for, then trains them to defeat those patterns.
             </p>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <Link
@@ -39,7 +37,7 @@ export default function Home() {
                 View Sample Results
               </Link>
             </div>
-            <div className="mt-4"><DemoControls /></div>
+            <DemoControls />
           </div>
           <MistakeTwinCard
             summary="Your Mistake Twin tracks the traps you tend to fall for, then turns those patterns into focused practice."
@@ -52,9 +50,18 @@ export default function Home() {
         </div>
       </section>
 
+      <section className="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
+        <div className="grid gap-5 rounded-2xl border border-indigo-200 bg-indigo-50 p-6 shadow-sm md:grid-cols-[1fr_auto] md:items-center">
+          <div><p className="text-sm font-semibold uppercase tracking-normal text-indigo-700">Judge Quick Test</p><h2 className="mt-2 text-2xl font-bold text-slate-950">See the full Mistake Twin loop in 3–5 minutes.</h2><ol className="mt-4 grid gap-1 text-sm text-slate-700 sm:grid-cols-2"><li>1. Load the fictional demo profile</li><li>2. Take the short diagnostic</li><li>3. Reveal the Mistake Twin</li><li>4. Complete the targeted follow-up</li><li>5. Try Trap Forge</li><li>6. View your progress</li></ol></div>
+          <Link href="/diagnostic?judgeDemo=1" className="inline-flex min-h-12 items-center justify-center rounded-md bg-indigo-700 px-5 py-3 font-semibold text-white">Start Judge Flow</Link>
+        </div>
+      </section>
+
       <section className="mx-auto max-w-6xl px-4 py-12 sm:px-6 lg:px-8">
         <DailyPracticeCard />
       </section>
+
+      <section className="mx-auto max-w-6xl px-4 pb-4 sm:px-6 lg:px-8"><p className="rounded-xl border border-slate-200 bg-white p-4 text-sm leading-6 text-slate-600"><strong className="text-slate-950">Free local mode:</strong> the diagnostic, Mistake Twin, verified local follow-up, Trap Forge, Daily Practice, and demo progress work without an account, Supabase, or an API key. Optional AI Enhanced feedback is always learner-triggered; verified local answers remain the source of truth.</p></section>
 
       <section className="mx-auto max-w-6xl px-4 py-12 sm:px-6 lg:px-8">
         <div className="grid gap-4 md:grid-cols-2">

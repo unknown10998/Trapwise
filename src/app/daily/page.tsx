@@ -8,6 +8,7 @@ import { sampleQuestions } from "@/data/sampleQuestions";
 import { buildDailyProgressRecord, createDailyPracticeSession, getStreak, localDate, readDailySession, readProgressHistory, saveDailySession, saveProgressHistory } from "@/lib/dailyPractice";
 import { readFromStorage } from "@/lib/storage";
 import { queueProgressForSync } from "@/lib/cloudSync";
+import { playCorrectAnswerSound } from "@/lib/sounds";
 import type { AnswerRecord, AnswerChoiceId, Confidence } from "@/types/question";
 import type { DailyAnswer, DailyPracticeSession, ProgressHistory } from "@/types/progress";
 
@@ -25,21 +26,37 @@ export default function DailyPage() {
   const [choice, setChoice] = useState<AnswerChoiceId | null>(null);
   const [confidence, setConfidence] = useState<Confidence>(null);
   const [showFeedback, setShowFeedback] = useState(false);
+  const [preparation, setPreparation] = useState<"preparing" | "ready" | "fallback" | "error">("preparing");
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
+    let active = true;
+    const timeout = window.setTimeout(() => { if (active) setPreparation("error"); }, 1800);
     const frame = window.requestAnimationFrame(() => {
-      const currentHistory = readProgressHistory();
-      const existing = readDailySession();
-      const today = localDate();
-      const diagnostic = readFromStorage<SavedDiagnostic>("adaptive-diagnostic", { records: [] });
-      const nextSession = existing?.date === today ? existing : createDailyPracticeSession({ diagnosticRecords: diagnostic.records, history: currentHistory, date: today });
-      if (nextSession !== existing) saveDailySession(nextSession);
-      setHistory(currentHistory); setSession(nextSession); setIndex(nextSession.answers.length);
+      try {
+        const currentHistory = readProgressHistory();
+        const existing = readDailySession();
+        const today = localDate();
+        const diagnostic = readFromStorage<SavedDiagnostic>("adaptive-diagnostic", { records: [] });
+        const nextSession = existing?.date === today ? existing : createDailyPracticeSession({ diagnosticRecords: diagnostic.records, history: currentHistory, date: today });
+        if (!nextSession?.selectedQuestionIds.length) throw new Error("No local practice questions were available.");
+        if (nextSession !== existing) saveDailySession(nextSession);
+        if (!active) return;
+        setHistory(currentHistory); setSession(nextSession); setIndex(nextSession.answers.length); setPreparation("ready");
+      } catch {
+        try {
+          const fallbackHistory: ProgressHistory = { version: 1, sessions: [] };
+          const fallback = createDailyPracticeSession({ diagnosticRecords: [], history: fallbackHistory, date: localDate(), availableQuestions: sampleQuestions });
+          if (!fallback.selectedQuestionIds.length) throw new Error("No fallback questions were available.");
+          if (!active) return;
+          saveDailySession(fallback); setHistory(fallbackHistory); setSession(fallback); setIndex(0); setPreparation("fallback");
+        } catch { if (active) setPreparation("error"); }
+      } finally { window.clearTimeout(timeout); }
     });
-    return () => window.cancelAnimationFrame(frame);
-  }, []);
+    return () => { active = false; window.clearTimeout(timeout); window.cancelAnimationFrame(frame); };
+  }, [attempt]);
 
-  if (!session) return <main className="mx-auto max-w-4xl px-4 py-10 sm:px-6 lg:px-8"><p className="text-slate-600">Preparing today&apos;s practice…</p></main>;
+  if (!session) return <main className="mx-auto max-w-4xl px-4 py-10 sm:px-6 lg:px-8"><p role="status" className="text-slate-600">{preparation === "error" ? "Unable to prepare today’s local practice." : "Preparing today’s practice…"}</p>{preparation === "error" && <div className="mt-5 flex gap-3"><button type="button" onClick={() => { setPreparation("preparing"); setAttempt((value) => value + 1); }} className="rounded-md bg-emerald-600 px-4 py-2 font-semibold text-white">Retry</button><Link href="/" className="rounded-md border border-slate-300 px-4 py-2 font-semibold text-slate-800">Return home</Link></div>}</main>;
   const question = getQuestion(session.selectedQuestionIds[index]);
   const streak = getStreak(history);
   if (session.isComplete || !question) return <DailyComplete session={session} history={history} />;
@@ -53,6 +70,7 @@ export default function DailyPage() {
       isVisual: Boolean(question.visual), visualCategory: question.visual?.category,
     };
     const updated = { ...session, answers: [...session.answers, answer] };
+    if (answer.isCorrect) playCorrectAnswerSound();
     saveDailySession(updated); setSession(updated); setShowFeedback(true);
   }
 
@@ -79,8 +97,9 @@ export default function DailyPage() {
       </div>
 
       <div className="mt-6"><QuestionCard question={question} selectedChoice={choice} onSelectChoice={setChoice} disabled={showFeedback} /></div>
+      {preparation === "fallback" && <p role="status" className="mt-4 rounded-md bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-800">Using a verified local fallback practice set.</p>}
       {!showFeedback ? <>
-        <section className="mt-5 rounded-lg border border-slate-200 bg-white p-5"><h2 className="font-semibold text-slate-950">Confidence (optional)</h2><div className="mt-3 grid gap-2 sm:grid-cols-4">{confidenceOptions.map((option) => <button key={option.value} type="button" onClick={() => setConfidence(option.value)} className={`rounded-md border px-3 py-2 text-sm font-medium ${confidence === option.value ? "border-emerald-600 bg-emerald-50" : "border-slate-200"}`}>{option.label}</button>)}</div></section>
+        <section className="mt-5 rounded-lg border border-slate-200 bg-white p-5"><h2 className="font-semibold text-slate-950">Confidence (optional)</h2><div className="mt-3 grid gap-2 sm:grid-cols-4">{confidenceOptions.map((option) => <button key={option.value} type="button" aria-pressed={confidence === option.value} onClick={() => setConfidence(option.value)} className={`rounded-md border px-3 py-2 text-sm font-medium ${confidence === option.value ? "border-emerald-600 bg-emerald-50" : "border-slate-200"}`}>{option.label}</button>)}</div></section>
         <button type="button" onClick={submitAnswer} disabled={!choice} className="mt-6 inline-flex min-h-11 items-center justify-center rounded-md bg-emerald-600 px-5 py-2 font-semibold text-white disabled:cursor-not-allowed disabled:bg-slate-300">Check Answer</button>
       </> : <section className={`mt-5 rounded-lg border p-5 ${answer?.isCorrect ? "border-emerald-200 bg-emerald-50" : "border-amber-200 bg-amber-50"}`} aria-live="polite">
         <p className="font-bold text-slate-950">{answer?.isCorrect ? "Nice work — you got it." : `The correct answer is ${question.correctAnswer}.`}</p>

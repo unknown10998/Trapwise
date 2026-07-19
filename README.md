@@ -2,232 +2,168 @@
 
 **See the trap. Learn the pattern. Beat the test.**
 
-Trapwise is an adaptive SAT-style educational web application for students who want to understand why they miss questions, not just whether an answer was right or wrong.
+Trapwise is a local-first SAT-style learning app. Instead of treating a wrong answer as a single event, it builds a **Mistake Twin**: a transparent profile of the distractor patterns a learner repeatedly selects. It then gives the learner a verified follow-up, a Trap Forge recognition activity, and a visible before-and-after pattern change.
 
-## Project Overview
+Trapwise is an independent educational project. It is not affiliated with, sponsored by, or endorsed by the College Board. Every question in the included bank is original and is not copied from an official SAT, College Board material, or commercial preparation resource.
 
-Trapwise helps middle-school and high-school students practice SAT-style Math and Reading and Writing questions with a focus on mistake patterns. The first version uses local sample data and browser state only. AI-powered mistake analysis is planned for a later version.
+## The problem
 
-## Problem
+Most practice products explain the correct answer after a miss. That can leave the underlying habit untouched: solving for the wrong value, choosing a plausible intermediate result, using the wrong operation, or over-reading evidence. Trapwise turns the learner's selected distractor into evidence, then teaches a concrete counter-strategy.
 
-Many practice tools show a score and a written explanation, but students often keep repeating the same hidden errors:
+## Core experience
 
-- Misreading the question
-- Solving for the wrong value
-- Choosing a tempting distractor
-- Using the wrong formula
-- Making an arithmetic mistake
-- Selecting an answer without enough textual evidence
+The complete guest flow works without an OpenAI or Supabase key:
 
-Trapwise is designed to make those patterns visible so students can practice against the habits that actually cost points.
+1. Start an adaptive diagnostic.
+2. Select an incorrect mapped distractor.
+3. View the Mistake Twin reveal, including strengths, recurring pattern, confidence check, counter-strategy, and deterministic pattern strength.
+4. Read verified local feedback about why that distractor was tempting.
+5. Complete a verified local follow-up.
+6. See the pattern weaken when the targeted reasoning is applied correctly.
+7. Complete a Trap Forge recognition round.
+8. View the updated impact and local progress timeline.
 
-## Mistake Twin
+Trapwise mastery is an internal learning estimate, not an official SAT score.
 
-The planned Mistake Twin is a profile of the mistakes a student commonly makes. As students answer diagnostic questions, Trapwise will connect missed answers to categories such as `misread_question`, `wrong_operation`, `solved_wrong_value`, and `weak_text_evidence`.
+## Implemented features
 
-Current version:
+- Five fixed diagnostic questions followed by local adaptive selection, up to 15 questions total.
+- Original, typed SAT-style Math, Reading and Writing, and visual-question records with four answer choices, verified explanations, strategies, distractor mappings, and approval status.
+- A deterministic Mistake Twin profile that tracks dominant and secondary mistake categories, skills, difficulty, high-confidence misses, improvement trend, and corrected patterns.
+- Deterministic 0–100 mastery and pattern-strength calculations; neither is calculated by AI.
+- Verified local mistake feedback, targeted follow-up, Daily Practice, streaks, a progress timeline, and a clearly fictional leaderboard/demo-data mode.
+- Trap Forge local evaluation and a before-and-after impact screen.
+- Four accessible theme options, reduced-motion handling, keyboard-operable choices, semantic form controls, and visual-question captions/alt text.
+- Optional Supabase authentication UI and a schema/migration with Row Level Security.
 
-- Includes typed mistake categories
-- Includes 25 original Systems of Nonlinear Equations questions with trap explanations
-- Runs a five-question fixed diagnostic followed by up to ten local adaptive questions
-- Tracks confidence, mistake categories, skill performance, and a local topic-mastery estimate
-- Produces a Mistake Twin summary and question-by-question review
+## Free Tier and optional AI
 
-Planned version:
+The Free Tier is intentionally complete: diagnostics, adaptation, local feedback, follow-ups, Daily Practice, Trap Forge, mastery, progress, achievements, visual questions, and the fictional demo board all work in browser storage with no API key.
 
-- Extend the adaptive question bank to more SAT-style topics
-- Use OpenAI models for personalized analysis and follow-up questions
+AI Enhanced is optional and disabled by default. It becomes available only when `OPENAI_API_KEY`, `OPENAI_MODEL`, and `ENABLE_AI_FEATURES=true` are set on the server. The learner must explicitly press **Analyze deeper** before any AI request is made. The request has a 12-second timeout, validates a constrained JSON response, and immediately returns the verified local explanation if it fails or is malformed.
 
-## Planned Core Features
+AI never changes a verified answer, calculates mastery, or adds generated questions to the approved question bank.
 
-- Adaptive diagnostic quiz for Systems of Nonlinear Equations
-- Question explanations that identify the trap behind each distractor
-- Mistake Twin profile based on repeated error patterns
-- Focused practice by weakness, skill, and mistake category
-- Local diagnostic-session tracking in browser storage
-- Later OpenAI-powered feedback and adaptive question generation
-
-## Current Development Status
-
-This is a local-first Build Week prototype. It has a reliable guest/demo path; Supabase cloud persistence is optional, and no OpenAI API calls are currently made.
-
-Implemented:
-
-- Next.js App Router project scaffold
-- Trapwise landing page
-- Five fixed diagnostic questions plus adaptive follow-up selection to a maximum of 15 questions
-- Confidence capture, local mastery estimate, skill and mistake tracking
-- Results report with review, Mistake Twin summary, and recommended practice skill
-- Practice page placeholder
-- Reusable React components
-- TypeScript question and mistake types
-- Twenty-five original SAT-style Systems of Nonlinear Equations questions
-
-Known limitations:
-
-- Supabase sign-in screens are implemented, but cloud profile persistence, verified XP writes, and live leaderboards require a configured project and secure server-side RPCs.
-- AI analysis, GPT-5.6 follow-ups, and AI trap evaluation are not implemented. The demo labels its current follow-up and Trap Forge evaluation as local rule-based logic.
-- The public leaderboard uses clearly labeled fictional demo rows until privacy-safe cloud ranking is configured.
-
-## Technology Stack
-
-- Next.js 16 with the App Router
-- React 19
-- TypeScript
-- Tailwind CSS 4
-- Local TypeScript sample data
-- Browser `localStorage` helper for future early progress tracking
-- Planned Vercel deployment
-- Planned GitHub version control workflow
-
-## Local Installation
-
-Install dependencies:
-
-```bash
-npm install
-```
-
-## Development Server
-
-Run the local development server:
-
-```bash
-npm run dev
-```
-
-Then open [http://localhost:3000](http://localhost:3000).
-
-## Build
-
-Create a production build:
-
-```bash
-npm run build
-```
-
-## Planned OpenAI Integration
-
-Trapwise does not call the OpenAI API yet. A later version is planned to use GPT-5.6 for:
-
-- Explaining why an incorrect answer was tempting
-- Summarizing a student's Mistake Twin
-- Generating personalized follow-up questions
-- Recommending practice based on repeated patterns
-
-No API keys are committed to the repository. The optional server route only calls OpenAI after a learner explicitly requests deeper analysis and the feature is enabled.
-
-## Trapwise Free Tier and optional AI
-
-**Trapwise’s core educational experience does not require an OpenAI API key.** Guests can use adaptive diagnostics, local Mistake Twin feedback, verified follow-ups, daily practice, mastery and streak tracking, visual questions, Trap Forge, XP, achievements, progress history, and the fictional demo leaderboard entirely in browser storage.
-
-AI Enhanced is optional. It is enabled only when all three server-only settings are present: `OPENAI_API_KEY`, `OPENAI_MODEL`, and `ENABLE_AI_FEATURES=true`. AI requests occur only after the learner presses the optional “Analyze deeper” button. Invalid, timed-out, unavailable, or malformed AI results immediately fall back to the verified local explanation; AI never calculates Trapwise mastery or replaces the approved question bank.
-
-## Accounts and Supabase
-
-Trapwise keeps local practice available while signed out. Optional accounts use Supabase Auth and the official Supabase JavaScript client; passwords are handled by Supabase and are never stored in this repository.
-
-1. Create a Supabase project and enable Email/Password authentication.
-2. In Supabase Authentication URL Configuration, add `http://localhost:3000/login` and `http://localhost:3000/reset-password` for local development.
-3. Copy `.env.example` to `.env.local` and set:
-
-```env
-NEXT_PUBLIC_SUPABASE_URL=https://YOUR_PROJECT.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=YOUR_PUBLIC_ANON_KEY
-SUPABASE_SERVICE_ROLE_KEY=leave_unset_unless_you_add_a_secure_server-only_operation
-```
-
-4. Run [`supabase/migrations/20260718_trapwise_platform.sql`](supabase/migrations/20260718_trapwise_platform.sql) in the Supabase SQL editor.
-
-The migration creates profiles, progress sessions, skill progress, mistake patterns, achievements, daily activity, and private leaderboard groups. It enables Row Level Security on every learner-data table. Users can only access their own rows; public leaderboard data must come from a narrowly scoped server-side view or RPC that returns opted-in display data only.
-
-## Current platform status
-
-- Complete locally: account UI, email/password and reset flows, protected profile/settings views, local-first pending-sync queue, visual questions, daily practice, diagnostics, XP curve, 22 achievement definitions, leaderboards and challenge-mode discovery screens.
-- Requires Supabase setup before it becomes cloud-backed: profile persistence, server-verified XP awards, achievement writes, public leaderboard query/RPC, group creation/join, and full local-to-cloud import confirmation.
-
-The queue uses stable client session IDs and a unique `(user_id, client_session_id)` database constraint, so refreshes do not duplicate uploaded sessions. XP must be computed and awarded through a server-side RPC/Edge Function after validating a completed session; the client never submits a total XP value.
-
-## Three-minute demo flow
-
-1. Open Trapwise and either continue as a guest or use the optional sign-in flow.
-2. Use **Start Diagnostic** and answer the adaptive questions.
-3. On Results, show the local Mistake Twin summary and question review.
-4. Select **Try Personalized Follow-Up** for a deterministic verified question matching the “solved wrong value” pattern.
-5. Complete **Trap Forge** to identify the distractor pattern and award local demo XP.
-6. Open Progress and Leaderboard. For a fast walkthrough, choose **Load Fictional Demo Data** on the home page; it creates only clearly labeled fictional browser data. **Reset Demo Data** removes it.
-
-## Deployment
-
-1. Push the repository to a Git provider and import it into Vercel.
-2. Set the public Supabase values in Vercel only if using account features.
-3. Add the deployed `/login` and `/reset-password` URLs to Supabase Authentication URL Configuration.
-4. Run `npm run lint` and `npm run build` before deployment.
-5. Keep `SUPABASE_SERVICE_ROLE_KEY` unset unless you add a server-only RPC/Edge Function; never expose it to the browser.
-
-Public demo: _Coming soon_ · Demo video: _Coming soon_
-
-## How Codex Is Being Used
-
-Codex is being used as a development partner to:
-
-- Inspect and explain the existing project
-- Create beginner-friendly project structure
-- Draft TypeScript types and sample data
-- Build page shells and reusable components
-- Keep unfinished features clearly labeled as planned
-- Check build and lint status during development
-
-## Project Structure
+## Architecture
 
 ```text
 src/
-├── app/
-│   ├── diagnostic/
-│   │   └── page.tsx
-│   ├── practice/
-│   │   └── page.tsx
-│   ├── results/
-│   │   └── page.tsx
-│   ├── globals.css
-│   ├── layout.tsx
-│   └── page.tsx
-├── components/
-│   ├── AnswerChoice.tsx
-│   ├── Header.tsx
-│   ├── MistakeTwinCard.tsx
-│   ├── ProgressBar.tsx
-│   ├── QuestionCard.tsx
-│   └── SubjectCard.tsx
-├── data/
-│   └── sampleQuestions.ts
-├── lib/
-│   └── storage.ts
-└── types/
-    ├── mistake.ts
-    └── question.ts
+├── app/                  # App Router pages and API routes
+├── components/           # Diagnostic, Mistake Twin, progress, auth, and theme UI
+├── data/sampleQuestions  # Approved original question bank
+├── lib/                  # Adaptive engine, local feedback, progress, storage, and API guards
+└── types/                # Question, visual, mistake, and progress contracts
+supabase/migrations/      # Optional cloud schema and RLS policies
 ```
 
-The project uses `src/app` because Next.js supports `src` as an optional application source folder. The TypeScript `@/*` path alias points to `src/*`.
+The application uses Next.js 16, React 19, TypeScript, Tailwind CSS 4, browser `localStorage`, and the Supabase JavaScript client.
 
-## Build Week Education Track
+## Codex and GPT-5.6 usage
 
-Trapwise is being built for the OpenAI Build Week Education track. The prototype explores how AI can help students learn from mistake patterns while keeping the first implementation simple, local, and easy to understand.
+Codex was used as a development collaborator for the typed question model, deterministic adaptive and Mistake Twin logic, UI implementation, local fallback behavior, accessibility checks, and production build verification.
 
-## Original Question Policy
+For an OpenAI Build Week submission, describe the specific GPT-5.6 work from the primary build session in your own words and include that session's `/feedback` ID. Do not claim a model, workflow, or capability that was not actually used.
 
-All Trapwise practice questions should be original. Questions must not be copied from official SAT exams, College Board materials, paid preparation books, paid question banks, or other commercial preparation materials.
+## Local setup
 
-## Visual question policy
+```bash
+npm install
+cp .env.example .env.local
+npm run dev
+```
 
-Trapwise supports reviewed, data-defined graphs, diagrams, tables, charts, and local image assets. Student-facing diagnostic and daily practice only select questions marked `approved`; unsafe raw SVG or HTML is never rendered. AI image ideas stay as review specifications until a human approves a local asset. See [`docs/visual-image-review.md`](docs/visual-image-review.md).
+Open `http://localhost:3000`. Blank environment values are supported: the app remains in guest/local mode.
 
-## Independent Project Disclaimer
+### Environment variables
 
-Trapwise is an independent SAT-style educational project. It is not affiliated with, sponsored by, reviewed by, or endorsed by the College Board.
+```env
+# Optional: required only for Supabase account features.
+NEXT_PUBLIC_SUPABASE_URL=https://YOUR_PROJECT.supabase.co
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=YOUR_SUPABASE_PUBLISHABLE_KEY
 
-## Demo and Deployment Links
+# Optional: required only for explicit AI Enhanced feedback.
+OPENAI_API_KEY=YOUR_SERVER_ONLY_OPENAI_KEY
+OPENAI_MODEL=YOUR_AVAILABLE_MODEL_ID
+ENABLE_AI_FEATURES=false
 
-- Demo video: _Coming soon_
-- Live deployment: _Coming soon_
-- GitHub repository: _Coming soon_
+# Leave unset unless a new secure server-only operation needs it.
+SUPABASE_SERVICE_ROLE_KEY=
+```
+
+Use the base Supabase project URL; do not include `/rest/v1`. Only the Supabase URL and publishable key are public browser variables. Never prefix OpenAI or service-role keys with `NEXT_PUBLIC_`. `.env.local` is ignored by Git; `.env.example` contains placeholders only.
+
+## Optional Supabase setup
+
+1. Create a Supabase project and enable Email/Password authentication.
+2. Add `http://localhost:3000/login` and `http://localhost:3000/reset-password` to Supabase Auth redirect URLs for local development.
+3. For deployment, add the equivalent production URLs and set the Supabase Site URL to your deployed origin.
+4. Run the migration files in `supabase/migrations/` in filename order. The second migration intentionally disables browser writes to score-bearing tables until a server-verified RPC or Edge Function exists.
+
+The migrations enable RLS for learner data and keep credentials in Supabase Auth rather than application tables. Cloud progress writes and public leaderboard ranking still require a server-verified RPC or Edge Function; browser clients can read their own records but cannot write score-bearing fields.
+
+## Testing
+
+```bash
+npm run lint
+npm run build
+```
+
+The focused browser suite below covers the guest flow, mobile overflow, and accessibility once its optional local dependencies are installed. Before recording or deploying, also manually test the guest flow above in an incognito window with every environment value blank, then test optional authentication and AI only in a configured project.
+
+### Browser test suite
+
+The repository includes focused Judge Demo, mobile-overflow, Daily fallback, keyboard, and axe accessibility tests under `tests/e2e/`. Browser packages are intentionally not committed as project dependencies so a minimal guest deployment stays lightweight.
+
+```bash
+npm install -D @playwright/test @axe-core/playwright
+npx playwright install chromium
+npm run test:e2e
+```
+
+The command starts a local Next.js server on port `3001`. To test a deployed environment instead, set `E2E_BASE_URL=https://your-deployment.example` before running the command. Playwright retains screenshots, video, and traces for failures in its test-results directory.
+
+## Deployment to Vercel
+
+1. Push the repository to your Git provider and import it into Vercel.
+2. Deploy with no variables for the guest-only demo, or add the optional variables above in Vercel Project Settings.
+3. If using Supabase authentication, configure the deployed origin, `/login`, and `/reset-password` in Supabase Auth URL Configuration.
+4. Run `npm run lint` and `npm run build` before deploying.
+5. Re-test the guest flow in a production incognito window. Never add secret values to the repository or client-side variables.
+
+## Build Week submission checklist
+
+- [ ] Select the **Education** category.
+- [ ] Provide a working public demo or a simple guest flow; Trapwise needs no account for the core experience.
+- [ ] Link a public repository with a license, or share a private repository with `testing@devpost.com` and `build-week-event@openai.com`.
+- [ ] Add the final public video URL below.
+- [ ] Record a public YouTube video under three minutes with spoken narration showing the core flow.
+- [ ] Explain how Codex and GPT-5.6 were actually used.
+- [ ] Enter the primary Codex `/feedback` Session ID in Devpost.
+- [ ] Include screenshots, test instructions, the College Board disclaimer, and no secrets.
+
+Public demo: https://trapwise.vercel.app<br>
+Demo video: _add public YouTube URL_<br>
+Codex `/feedback` Session ID: _add primary build-session ID_
+
+## Judge Testing Instructions
+
+### Fastest option
+
+1. Open the public demo: https://trapwise.vercel.app
+2. Click **Try Judge Demo**.
+3. Complete the five-question guided diagnostic; on Question 1, choose **C** to demonstrate the deterministic **Solved Wrong Value** pattern.
+4. View the Mistake Twin reveal.
+5. Complete the verified targeted follow-up.
+6. Try one Trap Forge interaction.
+7. View the before-and-after impact and progress summary.
+
+Estimated time: 3–5 minutes. No account, payment, API key, Supabase configuration, or local setup is required. **Reset Demo Data** removes the fictional profile and restores previously saved local progress when available.
+
+## Known limitations
+
+- The question bank is deliberately small and is not a complete SAT curriculum.
+- The follow-up route currently demonstrates the verified `solved_wrong_value` pattern; it is not yet dynamically selected for every possible dominant pattern.
+- Trap Forge currently teaches distractor-pattern recognition through a local, fixed scenario rather than collecting and grading a learner-authored distractor.
+- The achievement catalog is not yet wired to verified unlock events and is hidden from primary navigation. XP and the leaderboard are local/demo presentation features; cloud-backed awards and rankings are not implemented.
+- The optional AI route provides explanation only; it does not generate permanent questions or make mastery decisions.
+- `/practice` and `/challenges` are early standalone pages and are intentionally absent from primary navigation.

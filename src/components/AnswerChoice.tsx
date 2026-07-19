@@ -13,6 +13,7 @@ export function AnswerChoice({ choice, selected, onSelect, disabled = false }: A
   return (
     <button
       type="button"
+      data-testid={`answer-${choice.id}`}
       aria-pressed={selected}
       disabled={disabled}
       onClick={() => onSelect(choice.id)}
