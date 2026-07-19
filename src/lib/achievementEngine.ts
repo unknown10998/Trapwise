@@ -1,4 +1,50 @@
 export type AchievementDefinition = { key: string; name: string; description: string; category: string; icon: string; xpReward: number; target: number; hidden?: boolean };
-export const achievementDefinitions: AchievementDefinition[] = [
-  ["first-step","First Step","Complete your first question","getting-started","spark",10,1],["diagnostic-complete","Diagnostic Complete","Finish a diagnostic","getting-started","map",30,1],["meet-your-twin","Meet Your Twin","Reveal a Mistake Twin pattern","getting-started","mirror",20,1],["account-secured","Account Secured","Create and verify an account","getting-started","lock",20,1],["perfect-five","Perfect Five","Answer five questions correctly in one session","accuracy","target",40,5],["flawless-daily","Flawless Daily","Complete a daily set perfectly","accuracy","sun",40,1],["hard-hitter","Hard Hitter","Correct a Level 5 question","accuracy","bolt",35,1],["no-trap-too-tough","No Trap Too Tough","Win three challenges","accuracy","shield",50,3],["pattern-breaker","Pattern Breaker","Correct a recurring pattern","improvement","break",45,3],["five-points-up","Five Points Up","Gain five mastery points","improvement","up",30,5],["comeback","Comeback","Recover after two early misses","improvement","return",35,1],["weakness-to-strength","Weakness to Strength","Build a weak skill to proficiency","improvement","grow",60,1],["three-day-spark","Three-Day Spark","Practice for three days","streak","flame",20,3],["seven-day-streak","Seven-Day Streak","Practice for seven days","streak","fire",50,7],["fourteen-day-focus","Fourteen-Day Focus","Practice for fourteen days","streak","focus",80,14],["thirty-day-discipline","Thirty-Day Discipline","Practice for thirty days","streak","crown",150,30],["first-forged-trap","First Forged Trap","Create a Trap Forge distractor","forge","anvil",20,1],["convincing-trap","Convincing Trap","Create five valid traps","forge","mask",45,5],["graph-reader","Graph Reader","Complete five graph questions","visual","chart",25,5],["data-detective","Data Detective","Complete five data questions","visual","data",25,5],["diagram-master","Diagram Master","Complete five diagram questions","visual","shape",25,5],["secret-solver","Secret Solver","Unlock a hidden achievement","hidden","mystery",30,1,true]
-].map(([key,name,description,category,icon,xpReward,target,hidden]) => ({ key: String(key), name: String(name), description: String(description), category: String(category), icon: String(icon), xpReward: Number(xpReward), target: Number(target), hidden: Boolean(hidden) }));
+
+const definitions = [
+  ["first-step", "First Step", "Complete your first question", "getting-started", "spark", 10, 1],
+  ["diagnostic-complete", "Diagnostic Complete", "Finish a diagnostic", "getting-started", "map", 30, 1],
+  ["meet-your-twin", "Meet Your Twin", "Reveal a Mistake Twin pattern", "getting-started", "mirror", 20, 1],
+  ["account-secured", "Account Secured", "Create and verify an account", "getting-started", "lock", 20, 1],
+  ["warm-start", "Warm Start", "Answer three questions in your first session", "getting-started", "rocket", 15, 3],
+  ["daily-route", "Daily Route", "Complete your first Daily Practice set", "getting-started", "path", 25, 1],
+  ["twin-notes", "Twin Notes", "Read a targeted Mistake Twin explanation", "getting-started", "note", 15, 1],
+  ["account-ready", "Account Ready", "Complete your profile details", "getting-started", "user", 15, 1],
+  ["perfect-five", "Perfect Five", "Answer five questions correctly in one session", "accuracy", "target", 40, 5],
+  ["flawless-daily", "Flawless Daily", "Complete a daily set perfectly", "accuracy", "sun", 40, 1],
+  ["hard-hitter", "Hard Hitter", "Correct a Level 5 question", "accuracy", "bolt", 35, 1],
+  ["no-trap-too-tough", "No Trap Too Tough", "Win three challenges", "accuracy", "shield", 50, 3],
+  ["perfect-ten", "Perfect Ten", "Answer ten approved questions correctly", "accuracy", "ten", 65, 10],
+  ["clean-sweep", "Clean Sweep", "Complete three practice sets without a miss", "accuracy", "broom", 70, 3],
+  ["level-up", "Level Up", "Correct questions at three different difficulty levels", "accuracy", "stairs", 45, 3],
+  ["challenge-climber", "Challenge Climber", "Win five optional challenges", "accuracy", "mountain", 75, 5],
+  ["pattern-breaker", "Pattern Breaker", "Correct a recurring pattern", "improvement", "break", 45, 3],
+  ["five-points-up", "Five Points Up", "Gain five mastery points", "improvement", "up", 30, 5],
+  ["comeback", "Comeback", "Recover after two early misses", "improvement", "return", 35, 1],
+  ["weakness-to-strength", "Weakness to Strength", "Build a weak skill to proficiency", "improvement", "grow", 60, 1],
+  ["pattern-spotter", "Pattern Spotter", "Identify the same trap twice", "improvement", "detect", 30, 2],
+  ["ten-points-up", "Ten Points Up", "Gain ten mastery points", "improvement", "rise", 55, 10],
+  ["bounce-back", "Bounce Back", "Turn a missed question into a correct follow-up", "improvement", "bounce", 40, 1],
+  ["skill-builder", "Skill Builder", "Practice one skill across three sessions", "improvement", "bricks", 50, 3],
+  ["three-day-spark", "Three-Day Spark", "Practice for three days", "streak", "flame", 20, 3],
+  ["seven-day-streak", "Seven-Day Streak", "Practice for seven days", "streak", "fire", 50, 7],
+  ["fourteen-day-focus", "Fourteen-Day Focus", "Practice for fourteen days", "streak", "focus", 80, 14],
+  ["thirty-day-discipline", "Thirty-Day Discipline", "Practice for thirty days", "streak", "crown", 150, 30],
+  ["five-day-flame", "Five-Day Flame", "Practice on five different days", "streak", "flare", 35, 5],
+  ["ten-day-streak", "Ten-Day Streak", "Practice for ten days", "streak", "comet", 65, 10],
+  ["twenty-one-day-focus", "Twenty-One Day Focus", "Practice for twenty-one days", "streak", "anchor", 100, 21],
+  ["sixty-day-discipline", "Sixty-Day Discipline", "Practice for sixty days", "streak", "orbit", 220, 60],
+  ["first-forged-trap", "First Forged Trap", "Create a Trap Forge distractor", "forge", "anvil", 20, 1],
+  ["convincing-trap", "Convincing Trap", "Create five valid traps", "forge", "mask", 45, 5],
+  ["trap-smith", "Trap Smith", "Create three valid distractors", "forge", "hammer", 35, 3],
+  ["trap-architect", "Trap Architect", "Explain five different mistake patterns", "forge", "blueprint", 70, 5],
+  ["graph-reader", "Graph Reader", "Complete five graph questions", "visual", "chart", 25, 5],
+  ["data-detective", "Data Detective", "Complete five data questions", "visual", "data", 25, 5],
+  ["diagram-master", "Diagram Master", "Complete five diagram questions", "visual", "shape", 25, 5],
+  ["trend-translator", "Trend Translator", "Correct three trend questions", "visual", "trend", 35, 3],
+  ["table-reader", "Table Reader", "Correct three table questions", "visual", "table", 35, 3],
+  ["diagram-decoder", "Diagram Decoder", "Explain two visual misinterpretations", "visual", "decoder", 45, 2],
+  ["secret-solver", "Secret Solver", "Unlock a hidden achievement", "hidden", "mystery", 30, 1, true],
+  ["quiet-perfection", "Quiet Perfection", "Complete a full set with calibrated confidence", "hidden", "moon", 55, 1, true],
+].map(([key, name, description, category, icon, xpReward, target, hidden]) => ({ key: String(key), name: String(name), description: String(description), category: String(category), icon: String(icon), xpReward: Number(xpReward), target: Number(target), hidden: Boolean(hidden) }));
+
+export const achievementDefinitions: AchievementDefinition[] = definitions;
