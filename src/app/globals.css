@@ -94,6 +94,7 @@ button {
 .theme-swatch-midnight { background: linear-gradient(135deg, #0d1726 40%, #4ee1df 40% 70%, #164d71 70%); }
 .theme-swatch-paper { background: linear-gradient(135deg, #fff3df 40%, #de5c46 40% 70%, #ffd37e 70%); }
 .theme-swatch-tilt { background: linear-gradient(135deg, #eeeaff 40%, #7551d7 40% 70%, #ffcf70 70%); transform: rotate(-7deg); }
+.theme-notice-copy { color: color-mix(in srgb, var(--notice-ink) 82%, white); }
 
 :root[data-theme="midnight"] body { color-scheme: dark; }
 :root[data-theme] .bg-white, :root[data-theme] .bg-white\/90 { background-color: var(--surface) !important; }

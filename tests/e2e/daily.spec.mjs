@@ -5,11 +5,9 @@ test("Daily Practice recovers from invalid local storage with a bounded local se
   await page.goto("/daily");
   await expect(page.getByRole("heading", { name: "Daily Practice" })).toBeVisible();
   await expect(page.getByText("Preparing today’s practice…")).toBeHidden();
-  const progress = page.getByRole("progressbar");
+  const progress = page.getByRole("progressbar", { name: "Daily practice progress" });
   await expect(progress).toHaveCount(1);
-  const total = Number(await progress.getAttribute("aria-valuemax"));
-  expect(total).toBeGreaterThanOrEqual(3);
-  expect(total).toBeLessThanOrEqual(5);
+  await expect(progress).toHaveAttribute("aria-valuetext", /1 of [3-5] questions/);
   await page.screenshot({ path: testInfo.outputPath("daily-local-fallback.png"), fullPage: true });
   await page.reload();
   await expect(page.getByRole("heading", { name: "Daily Practice" })).toBeVisible();

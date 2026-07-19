@@ -2,6 +2,25 @@ import type { SATQuestion } from "@/types/question";
 
 export type VisualValidationResult = { valid: boolean; errors: string[] };
 
+export function validateQuestionBank(questions: SATQuestion[]) {
+  const errors: string[] = [];
+  const ids = new Set<string>();
+  for (const question of questions) {
+    if (ids.has(question.id)) errors.push(`${question.id}: duplicate question id.`);
+    ids.add(question.id);
+    if (question.answerChoices.length !== 4) errors.push(`${question.id}: must have exactly four answer choices.`);
+    if (new Set(question.answerChoices.map((choice) => choice.id)).size !== question.answerChoices.length) errors.push(`${question.id}: answer choice ids must be unique.`);
+    if (new Set(question.answerChoices.map((choice) => choice.text.trim())).size !== question.answerChoices.length) errors.push(`${question.id}: answer choice text must be unique.`);
+    if (!question.answerChoices.some((choice) => choice.id === question.correctAnswer)) errors.push(`${question.id}: correct answer must match a choice.`);
+    for (const choice of question.answerChoices) {
+      if (choice.id !== question.correctAnswer && (!question.distractorAnalysis[choice.id]?.trim() || !question.mistakeCategoryByChoice[choice.id])) errors.push(`${question.id}: wrong choice ${choice.id} needs an explanation and mistake category.`);
+    }
+    if (question.visual && question.status !== "approved") errors.push(`${question.id}: student-facing visuals must be approved.`);
+    errors.push(...validateQuestionVisual(question).errors.map((error) => `${question.id}: ${error}`));
+  }
+  return errors;
+}
+
 export function validateQuestionVisual(question: SATQuestion): VisualValidationResult {
   const visual = question.visual;
   if (!visual) return { valid: true, errors: [] };

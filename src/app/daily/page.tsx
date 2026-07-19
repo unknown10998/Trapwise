@@ -93,21 +93,21 @@ export default function DailyPage() {
         </div>
         <p className="mt-4 leading-7 text-slate-600">{session.reason}</p>
         <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4"><Info label="Current mastery" value={String(session.startingMastery)} /><Info label="Previous mastery" value={String(history.sessions.at(-1)?.masteryAfter ?? session.startingMastery)} /><Info label="Today&apos;s target" value={session.targetSkill} /><Info label="Mistake Twin pattern" value={session.targetMistakeCategory?.replaceAll("_", " ") ?? "Building evidence"} /></div>
-        <div className="mt-6"><div className="mb-2 flex justify-between text-sm text-slate-600"><span>Daily question {index + 1}</span><span>{session.answers.length} answered</span></div><ProgressBar current={index + 1} total={session.selectedQuestionIds.length} /></div>
+        <div className="mt-6"><div className="mb-2 flex justify-between text-sm text-slate-600"><span>Daily question {index + 1}</span><span>{session.answers.length} answered</span></div><ProgressBar current={index + 1} total={session.selectedQuestionIds.length} label="Daily practice progress" /></div>
       </div>
 
       <div className="mt-6"><QuestionCard question={question} selectedChoice={choice} onSelectChoice={setChoice} disabled={showFeedback} /></div>
       {preparation === "fallback" && <p role="status" className="mt-4 rounded-md bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-800">Using a verified local fallback practice set.</p>}
       {!showFeedback ? <>
         <section className="mt-5 rounded-lg border border-slate-200 bg-white p-5"><h2 className="font-semibold text-slate-950">Confidence (optional)</h2><div className="mt-3 grid gap-2 sm:grid-cols-4">{confidenceOptions.map((option) => <button key={option.value} type="button" aria-pressed={confidence === option.value} onClick={() => setConfidence(option.value)} className={`rounded-md border px-3 py-2 text-sm font-medium ${confidence === option.value ? "border-emerald-600 bg-emerald-50" : "border-slate-200"}`}>{option.label}</button>)}</div></section>
-        <button type="button" onClick={submitAnswer} disabled={!choice} className="mt-6 inline-flex min-h-11 items-center justify-center rounded-md bg-emerald-600 px-5 py-2 font-semibold text-white disabled:cursor-not-allowed disabled:bg-slate-300">Check Answer</button>
+        <div className="mt-6 flex flex-wrap items-center gap-5"><button type="button" onClick={submitAnswer} disabled={!choice} className="inline-flex min-h-11 items-center justify-center rounded-md bg-emerald-600 px-5 py-2 font-semibold text-white disabled:cursor-not-allowed disabled:bg-slate-300">Check Answer</button><Link href="/progress" className="inline-flex min-h-11 items-center font-semibold text-emerald-700 hover:underline">View your progress</Link></div>
       </> : <section className={`mt-5 rounded-lg border p-5 ${answer?.isCorrect ? "border-emerald-200 bg-emerald-50" : "border-amber-200 bg-amber-50"}`} aria-live="polite">
         <p className="font-bold text-slate-950">{answer?.isCorrect ? "Nice work — you got it." : `The correct answer is ${question.correctAnswer}.`}</p>
         <p className="mt-2 leading-7 text-slate-700">{question.explanation}</p><p className="mt-2 text-sm leading-6 text-slate-600"><strong>Main trap:</strong> {question.mainTrap}</p>
         {!answer?.isCorrect && <p className="mt-2 text-sm text-slate-600">Pattern noticed: {answer?.mistakeCategory?.replaceAll("_", " ")}.</p>}
         <button type="button" onClick={nextQuestion} className="mt-5 inline-flex min-h-11 items-center justify-center rounded-md bg-emerald-600 px-5 py-2 font-semibold text-white">{index + 1 === session.selectedQuestionIds.length ? "Finish Daily Practice" : "Next Question"}</button>
       </section>}
-      <Link href="/progress" className="mt-6 inline-flex text-sm font-semibold text-emerald-700 hover:underline">View your progress</Link>
+      {showFeedback && <Link href="/progress" className="mt-6 inline-flex min-h-11 items-center text-sm font-semibold text-emerald-700 hover:underline">View your progress</Link>}
     </main>
   );
 }

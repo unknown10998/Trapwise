@@ -1,6 +1,7 @@
 import { sampleQuestions } from "@/data/sampleQuestions";
 import { buildDiagnosticReport } from "@/lib/diagnosticReport";
 import { getMistakeCounts, getSkillPerformance } from "@/lib/adaptiveEngine";
+import { writeToStorage } from "@/lib/storage";
 import type { AnswerRecord, DifficultyLevel, SATQuestion } from "@/types/question";
 import type { MistakeCategory } from "@/types/mistake";
 import type { DailyPracticeSession, ProgressHistory, ProgressRecord } from "@/types/progress";
@@ -26,7 +27,11 @@ export function readProgressHistory(): ProgressHistory {
 }
 
 export function saveProgressHistory(history: ProgressHistory) {
-  window.localStorage.setItem(`trapwise:${HISTORY_KEY}`, JSON.stringify(history));
+  if (typeof window === "undefined") return;
+  const current = readProgressHistory();
+  const sessions = new Map(current.sessions.map((session) => [session.sessionId, session]));
+  for (const session of history.sessions) sessions.set(session.sessionId, session);
+  writeToStorage(HISTORY_KEY, { version: 1, sessions: [...sessions.values()] });
 }
 
 export function readDailySession(): DailyPracticeSession | null {
@@ -41,7 +46,7 @@ export function readDailySession(): DailyPracticeSession | null {
 }
 
 export function saveDailySession(session: DailyPracticeSession) {
-  window.localStorage.setItem(`trapwise:${DAILY_KEY}`, JSON.stringify(session));
+  writeToStorage(DAILY_KEY, session);
 }
 
 function hash(value: string) {

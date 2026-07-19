@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { getStreak, localDate, readDailySession, readProgressHistory } from "@/lib/dailyPractice";
 import { readDemoProfile, type DemoProfile } from "@/lib/demoMode";
+import { subscribeToStorage } from "@/lib/storage";
 
 type Status = { demo: DemoProfile | null; streak: number; bestStreak: number; completedToday: boolean; sessions: number };
 const emptyStatus: Status = { demo: null, streak: 0, bestStreak: 0, completedToday: false, sessions: 0 };
@@ -12,13 +13,17 @@ export function HomeLearningStatus() {
   const [status, setStatus] = useState(emptyStatus);
 
   useEffect(() => {
-    const frame = window.requestAnimationFrame(() => {
+    const refresh = () => {
       const history = readProgressHistory();
       const streak = getStreak(history);
       const session = readDailySession();
       setStatus({ demo: readDemoProfile(), streak: streak.active, bestStreak: streak.longest, completedToday: session?.date === localDate() && session.isComplete, sessions: history.sessions.length });
-    });
-    return () => window.cancelAnimationFrame(frame);
+    };
+    const frame = window.requestAnimationFrame(refresh);
+    const unsubscribeHistory = subscribeToStorage("progress-history-v1", refresh);
+    const unsubscribeDaily = subscribeToStorage("daily-session-v1", refresh);
+    const unsubscribeDemo = subscribeToStorage("demo-profile-v1", refresh);
+    return () => { window.cancelAnimationFrame(frame); unsubscribeHistory(); unsubscribeDaily(); unsubscribeDemo(); };
   }, []);
 
   const demo = status.demo?.enabled ? status.demo : null;

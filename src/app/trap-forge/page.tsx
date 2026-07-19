@@ -108,8 +108,8 @@ export default function TrapForgePage() {
 
     <section className="mt-6 rounded-2xl border border-indigo-200 bg-indigo-50 p-5" aria-labelledby="forge-prompt">
       <h2 id="forge-prompt" className="text-xl font-bold">The student stops too early</h2>
-      <p className="mt-2 text-slate-700">For <strong>x + y = 6</strong> and <strong>y = x²</strong>, a student solves and finds <strong>x = 2</strong>. The question asks for <strong>y</strong>, whose correct answer is <strong>4</strong>.</p>
-      <p className="mt-3 text-sm text-slate-600">Existing answer choices: {existingChoices.join(", ")}. Add the tempting wrong value created by this exact mistake, then explain the faulty step.</p>
+      <p className="theme-notice-copy mt-2">For <strong>x + y = 6</strong> and <strong>y = x²</strong>, a student solves and finds <strong>x = 2</strong>. The question asks for <strong>y</strong>, whose correct answer is <strong>4</strong>.</p>
+      <p className="theme-notice-copy mt-3 text-sm">Existing answer choices: {existingChoices.join(", ")}. Add the tempting wrong value created by this exact mistake, then explain the faulty step.</p>
     </section>
 
     <div className="mt-6 grid gap-5">

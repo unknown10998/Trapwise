@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, type PointerEvent } from "react";
 import { getSoundVolume, playCorrectAnswerSound, setSoundVolume } from "@/lib/sounds";
+import { notifyStorageChange, subscribeToStorage } from "@/lib/storage";
 
 const themes = [
   { id: "signal", name: "Signal Garden", description: "Crisp mint, ink, and notebook cream." },
@@ -29,6 +30,11 @@ export function ThemeSettings() {
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
   }, [theme]);
+
+  useEffect(() => subscribeToStorage("theme", () => {
+    const stored = window.localStorage.getItem("trapwise:theme");
+    setTheme(isTheme(stored) ? stored : "signal");
+  }), []);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -66,6 +72,7 @@ export function ThemeSettings() {
   function chooseTheme(nextTheme: ThemeId) {
     setTheme(nextTheme);
     window.localStorage.setItem("trapwise:theme", nextTheme);
+    notifyStorageChange("theme");
     setIsOpen(false);
   }
 

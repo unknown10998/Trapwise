@@ -183,7 +183,7 @@ export default function DiagnosticPage() {
             <span>Estimated progress</span>
             <span>{wasAdaptive ? "Building your topic profile" : "Establishing your starting point"}</span>
           </div>
-          <ProgressBar current={questionNumber} total={15} />
+          <ProgressBar current={questionNumber} total={15} label="Diagnostic progress" />
         </div>
       </div>
 
