@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState, type PointerEvent } from "react";
+import { createPortal } from "react-dom";
+import { useEffect, useRef, useState, useSyncExternalStore, type PointerEvent } from "react";
 import { getSoundVolume, playCorrectAnswerSound, setSoundVolume } from "@/lib/sounds";
 import { notifyStorageChange, subscribeToStorage } from "@/lib/storage";
 
@@ -13,11 +14,22 @@ const themes = [
 
 type ThemeId = (typeof themes)[number]["id"];
 const isTheme = (value: string | null): value is ThemeId => themes.some((theme) => theme.id === value);
+const themePalette: Record<ThemeId, { background: string; foreground: string }> = {
+  signal: { background: "#f3f5ef", foreground: "#18221d" },
+  midnight: { background: "#0d1726", foreground: "#eaf4ff" },
+  paper: { background: "#fff3df", foreground: "#302334" },
+  tilt: { background: "#eeeaff", foreground: "#261f45" },
+};
+const subscribeToMount = () => () => undefined;
+const getMountedSnapshot = () => true;
+const getServerMountedSnapshot = () => false;
 
 export function ThemeSettings() {
   const [isOpen, setIsOpen] = useState(false);
+  const mounted = useSyncExternalStore(subscribeToMount, getMountedSnapshot, getServerMountedSnapshot);
   const [volume, setVolume] = useState(() => getSoundVolume());
   const [offset, setOffset] = useState({ x: 0, y: 0 });
+  const transitionTimer = useRef<number | null>(null);
   const dragStart = useRef<{ x: number; y: number; offsetX: number; offsetY: number } | null>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const dialogRef = useRef<HTMLElement>(null);
@@ -29,12 +41,33 @@ export function ThemeSettings() {
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
+    const palette = themePalette[theme];
+    document.documentElement.classList.toggle("trapwise-dark", theme === "midnight");
+    document.documentElement.style.backgroundColor = palette.background;
+    document.body.classList.toggle("trapwise-dark", theme === "midnight");
+    document.body.style.backgroundColor = palette.background;
+    document.body.style.color = palette.foreground;
+    document.body.style.background = theme === "midnight" ? palette.background : "";
   }, [theme]);
+
+  function setThemeWithTransition(nextTheme: ThemeId) {
+    if (transitionTimer.current) window.clearTimeout(transitionTimer.current);
+    document.documentElement.classList.add("theme-transitioning");
+    setTheme(nextTheme);
+    transitionTimer.current = window.setTimeout(() => {
+      document.documentElement.classList.remove("theme-transitioning");
+      transitionTimer.current = null;
+    }, 800);
+  }
 
   useEffect(() => subscribeToStorage("theme", () => {
     const stored = window.localStorage.getItem("trapwise:theme");
-    setTheme(isTheme(stored) ? stored : "signal");
+    setThemeWithTransition(isTheme(stored) ? stored : "signal");
   }), []);
+
+  useEffect(() => () => {
+    if (transitionTimer.current) window.clearTimeout(transitionTimer.current);
+  }, []);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -69,8 +102,17 @@ export function ThemeSettings() {
     };
   }, [isOpen]);
 
+  useEffect(() => {
+    if (!isOpen) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [isOpen]);
+
   function chooseTheme(nextTheme: ThemeId) {
-    setTheme(nextTheme);
+    setThemeWithTransition(nextTheme);
     window.localStorage.setItem("trapwise:theme", nextTheme);
     notifyStorageChange("theme");
     setIsOpen(false);
@@ -88,8 +130,61 @@ export function ThemeSettings() {
 
   function stopDrag() { dragStart.current = null; }
 
+  const modal = isOpen && (
+    <div className="theme-overlay fixed inset-0 z-[9999] grid place-items-center p-4">
+      <button
+        type="button"
+        aria-label="Close theme settings"
+        tabIndex={-1}
+        className="absolute inset-0 bg-black/40 backdrop-blur-md"
+        onClick={() => setIsOpen(false)}
+      />
+      <section
+        ref={dialogRef}
+        className="theme-menu relative z-10 w-full max-w-sm rounded-2xl border p-4 shadow-xl"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Theme settings"
+        onClick={(event) => event.stopPropagation()}
+        style={{ transform: `translate(${offset.x}px, ${offset.y}px)` }}
+      >
+        <div className="flex cursor-grab touch-none items-center justify-between gap-4 px-1 pb-3 active:cursor-grabbing" onPointerDown={startDrag} onPointerMove={drag} onPointerUp={stopDrag} onPointerCancel={stopDrag}>
+          <div>
+            <p className="text-xs font-bold uppercase tracking-[0.16em]">Study atmosphere</p>
+            <p className="pt-1 text-sm opacity-75">Drag here to move this panel.</p>
+          </div>
+          <button type="button" onPointerDown={(event) => event.stopPropagation()} onClick={() => setIsOpen(false)} className="theme-close rounded-full px-3 py-1 text-sm font-bold" aria-label="Close theme settings">
+            Close
+          </button>
+        </div>
+        <div className="grid gap-2">
+          {themes.map((option) => (
+            <button
+              key={option.id}
+              type="button"
+              onClick={() => chooseTheme(option.id)}
+              className={`theme-option flex items-center gap-3 rounded-xl p-3 text-left ${theme === option.id ? "theme-option-active" : ""}`}
+            >
+              <span className={`theme-swatch theme-swatch-${option.id}`} aria-hidden="true" />
+              <span>
+                <span className="block text-sm font-bold">{option.name}</span>
+                <span className="block pt-0.5 text-xs opacity-75">{option.description}</span>
+              </span>
+            </button>
+          ))}
+        </div>
+        <div className="mt-4 border-t pt-4" style={{ borderColor: "var(--line)" }}>
+          <div className="flex items-center justify-between gap-3"><label htmlFor="sound-volume" className="text-sm font-bold">Celebration volume</label><span className="text-xs font-semibold">{Math.round(volume * 100)}%</span></div>
+          <input id="sound-volume" type="range" min="0" max="100" value={Math.round(volume * 100)} onChange={(event) => { const next = Number(event.target.value) / 100; setVolume(next); setSoundVolume(next); }} className="mt-3 w-full accent-[var(--accent)]" />
+          <button type="button" onClick={playCorrectAnswerSound} className="mt-2 text-sm font-semibold underline underline-offset-4">Preview success cheer</button>
+        </div>
+      </section>
+    </div>
+  );
+
   return (
-    <div className="relative">
+    <>
+      <div className="relative">
       <button
         ref={triggerRef}
         type="button"
@@ -103,50 +198,8 @@ export function ThemeSettings() {
           <circle cx="12" cy="12" r="2.8" />
         </svg>
       </button>
-      {isOpen && (
-        <div className="theme-overlay fixed inset-0 z-40 grid place-items-center p-4" onClick={() => setIsOpen(false)}>
-          <section
-            ref={dialogRef}
-            className="theme-menu w-full max-w-sm rounded-2xl border p-4 shadow-xl"
-            role="dialog"
-            aria-modal="true"
-            aria-label="Theme settings"
-            onClick={(event) => event.stopPropagation()}
-            style={{ transform: `translate(${offset.x}px, ${offset.y}px)` }}
-          >
-            <div className="flex cursor-grab touch-none items-center justify-between gap-4 px-1 pb-3 active:cursor-grabbing" onPointerDown={startDrag} onPointerMove={drag} onPointerUp={stopDrag} onPointerCancel={stopDrag}>
-              <div>
-                <p className="text-xs font-bold uppercase tracking-[0.16em]">Study atmosphere</p>
-                <p className="pt-1 text-sm opacity-75">Drag here to move this panel.</p>
-              </div>
-              <button type="button" onPointerDown={(event) => event.stopPropagation()} onClick={() => setIsOpen(false)} className="theme-close rounded-full px-3 py-1 text-sm font-bold" aria-label="Close theme settings">
-                Close
-              </button>
-            </div>
-            <div className="grid gap-2">
-              {themes.map((option) => (
-                <button
-                  key={option.id}
-                  type="button"
-                  onClick={() => chooseTheme(option.id)}
-                  className={`theme-option flex items-center gap-3 rounded-xl p-3 text-left ${theme === option.id ? "theme-option-active" : ""}`}
-                >
-                  <span className={`theme-swatch theme-swatch-${option.id}`} aria-hidden="true" />
-                  <span>
-                    <span className="block text-sm font-bold">{option.name}</span>
-                    <span className="block pt-0.5 text-xs opacity-75">{option.description}</span>
-                  </span>
-                </button>
-              ))}
-            </div>
-            <div className="mt-4 border-t pt-4" style={{ borderColor: "var(--line)" }}>
-              <div className="flex items-center justify-between gap-3"><label htmlFor="sound-volume" className="text-sm font-bold">Celebration volume</label><span className="text-xs font-semibold">{Math.round(volume * 100)}%</span></div>
-              <input id="sound-volume" type="range" min="0" max="100" value={Math.round(volume * 100)} onChange={(event) => { const next = Number(event.target.value) / 100; setVolume(next); setSoundVolume(next); }} className="mt-3 w-full accent-[var(--accent)]" />
-              <button type="button" onClick={playCorrectAnswerSound} className="mt-2 text-sm font-semibold underline underline-offset-4">Preview success cheer</button>
-            </div>
-          </section>
-        </div>
-      )}
-    </div>
+      </div>
+      {mounted && modal ? createPortal(modal, document.body) : null}
+    </>
   );
 }

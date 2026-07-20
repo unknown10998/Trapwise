@@ -45,7 +45,11 @@ export default function DiagnosticPage() {
       }
 
       const saved = readFromStorage<SavedDiagnostic>("adaptive-diagnostic", { records: [], stopReason: null });
-      if (saved.stopReason || saved.records.length === 0) return;
+      if (saved.stopReason) {
+        router.replace("/results");
+        return;
+      }
+      if (saved.records.length === 0) return;
       const lastRecord = saved.records.at(-1);
       const nextFixed = fixedDiagnosticQuestions[saved.records.length];
       if (nextFixed) {
@@ -69,7 +73,7 @@ export default function DiagnosticPage() {
       }
     });
     return () => window.cancelAnimationFrame(frame);
-  }, []);
+  }, [router]);
 
   function finishDiagnostic(updatedRecords: AnswerRecord[], stopReason: DiagnosticStopReason) {
     writeToStorage<SavedDiagnostic>("adaptive-diagnostic", { records: updatedRecords, stopReason });

@@ -19,7 +19,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body><a className="skip-link" href="#main-content">Skip to main content</a><AuthProvider><Header /><OfflineStatus /><JudgeDemoProgress /><Onboarding /><div id="main-content" tabIndex={-1}><RouteLoadingGlint>{children}</RouteLoadingGlint></div></AuthProvider></body>
+      <body><a className="skip-link" href="#main-content">Skip to main content</a><AuthProvider><Header /><OfflineStatus /><JudgeDemoProgress /><Onboarding /><div id="main-content" className="theme-page-canvas" tabIndex={-1}><RouteLoadingGlint>{children}</RouteLoadingGlint></div></AuthProvider></body>
     </html>
   );
 }

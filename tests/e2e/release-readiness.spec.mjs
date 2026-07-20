@@ -7,6 +7,8 @@ test("the four themes persist and settings remain usable in the dark theme", asy
   await expect(page.getByRole("dialog", { name: "Theme settings" })).toBeVisible();
   await page.getByRole("button", { name: /Midnight Circuit/ }).click();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "midnight");
+  await expect(page.locator("html")).not.toHaveClass(/theme-transitioning/);
+  await expect.poll(() => page.evaluate(() => ({ body: getComputedStyle(document.body).backgroundColor, canvas: getComputedStyle(document.querySelector(".theme-page-canvas")).backgroundColor }))).toEqual({ body: "rgb(13, 23, 38)", canvas: "rgb(13, 23, 38)" });
   await page.reload();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "midnight");
   await page.getByRole("button", { name: "Choose a Trapwise theme" }).click();
@@ -23,6 +25,7 @@ test("the four themes persist and settings remain usable in the dark theme", asy
     await expect(page.locator("html")).toHaveAttribute("data-theme", name === "Signal Garden" ? "signal" : name === "Midnight Circuit" ? "midnight" : name === "Paper Pop" ? "paper" : "tilt");
     if (name !== "Tilt Lab") await page.getByRole("button", { name: "Choose a Trapwise theme" }).click();
   }
+  await expect(page.locator("html")).not.toHaveClass(/theme-transitioning/);
   const results = await new AxeBuilder({ page }).analyze();
   expect(results.violations).toEqual([]);
 });
@@ -35,6 +38,33 @@ test("offline mode gives a clear local fallback without blocking the loaded prac
   await expect(page.locator("body")).not.toContainText("Invalid supabaseUrl");
   await context.setOffline(false);
   await expect(page.getByRole("status")).toHaveCount(0);
+});
+
+test("a completed diagnostic returns to results instead of starting question one again", async ({ page }) => {
+  await page.addInitScript(() => {
+    window.localStorage.setItem("trapwise:adaptive-diagnostic", JSON.stringify({
+      records: [{
+        questionId: "systems-nonlinear-001",
+        selectedChoice: "B",
+        correctChoice: "B",
+        isCorrect: true,
+        mistakeCategory: null,
+        difficultyLevel: 1,
+        primarySkill: "Solving linear equations",
+        confidence: "certain",
+        responseOrder: 1,
+        wasAdaptive: false,
+        masteryBefore: 50,
+        masteryAfter: 55,
+      }],
+      stopReason: "maximum_questions",
+    }));
+  });
+
+  await page.goto("/diagnostic");
+  await page.waitForURL("**/results");
+  await expect(page.getByRole("heading", { name: "Your systems profile" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Submit Answer" })).toHaveCount(0);
 });
 
 test("theme changes propagate to a second tab", async ({ page, context }) => {

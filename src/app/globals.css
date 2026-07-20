@@ -46,6 +46,27 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
+.theme-page-canvas { min-height: calc(100vh - 5rem); color: var(--foreground); }
+:root[data-theme="midnight"] body,
+:root[data-theme="midnight"] .theme-page-canvas { background: var(--background); }
+html.trapwise-dark,
+body.trapwise-dark,
+body.trapwise-dark #main-content { background-color: #0d1726 !important; background-image: none !important; color: #eaf4ff; }
+:root.theme-transitioning body,
+:root.theme-transitioning body *,
+:root.theme-transitioning body *::before,
+:root.theme-transitioning body *::after {
+  transition-property: background-color, color, border-color, box-shadow, fill, stroke;
+  transition-duration: 800ms;
+  transition-timing-function: ease-in-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  :root.theme-transitioning body,
+  :root.theme-transitioning body *,
+  :root.theme-transitioning body *::before,
+  :root.theme-transitioning body *::after { transition-duration: 0ms; }
+}
+
 body::before {
   position: fixed;
   z-index: -1;
@@ -84,7 +105,6 @@ button {
 :root[data-theme="tilt"] .brand-logo-image { filter: hue-rotate(0deg) saturate(1.45) brightness(1.08) drop-shadow(0 2px 4px color-mix(in srgb, var(--accent) 48%, transparent)); }
 .theme-gear { border-color: var(--line); background: var(--surface); box-shadow: 2px 2px 0 var(--accent-soft); transition: transform 160ms ease; }
 .theme-gear:hover { transform: rotate(35deg) scale(1.04); }
-.theme-overlay { background: rgb(8 15 24 / 68%); backdrop-filter: blur(7px); }
 .theme-menu { border-color: var(--line); background: var(--surface); color: var(--foreground); animation: theme-pop 180ms ease-out; }
 .theme-close { background: var(--accent-soft); color: var(--foreground); }
 .theme-option { color: var(--foreground); transition: background 160ms ease, transform 160ms ease; }
