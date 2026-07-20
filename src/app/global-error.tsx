@@ -8,7 +8,7 @@ export default function GlobalError({
 }) {
   return (
     <html lang="en">
-      <body style={{ margin: 0, background: "#f8fafc", color: "#0f172a", fontFamily: "Arial, sans-serif" }}>
+      <body style={{ margin: 0, background: "#f8fafc", color: "#0f172a", fontFamily: '"Avenir Next", "Inter", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>
         <main style={{ margin: "0 auto", maxWidth: 640, padding: "80px 24px" }}>
           <p style={{ color: "#047857", fontWeight: 700, textTransform: "uppercase", fontSize: 13 }}>Trapwise</p>
           <h1 style={{ fontSize: 32 }}>Something needs another try.</h1>

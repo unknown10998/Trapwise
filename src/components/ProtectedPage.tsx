@@ -5,8 +5,9 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/AuthProvider";
 
 export function ProtectedPage({ children }: { children: React.ReactNode }) {
-  const { user, loading, configured } = useAuth(); const router = useRouter();
-  useEffect(() => { if (!loading && !user) router.replace(`/login?next=${encodeURIComponent(window.location.pathname)}`); }, [loading, user, router]);
+  const { user, loading, configured, guestMode } = useAuth(); const router = useRouter();
+  useEffect(() => { if (!loading && !user && !guestMode) router.replace(`/login?next=${encodeURIComponent(window.location.pathname)}`); }, [loading, user, guestMode, router]);
+  if (guestMode) return <>{children}</>;
   if (!configured) return <main className="mx-auto max-w-3xl px-4 py-10"><h1 className="text-2xl font-bold">Account features need Supabase setup</h1><p className="mt-3 text-slate-600">Add the public Supabase URL and publishable key to .env.local. Local study features remain available.</p></main>;
   if (loading || !user) return <main className="mx-auto max-w-3xl px-4 py-10"><h1 className="text-2xl font-bold">Checking your account</h1><p className="mt-3 text-slate-600">Checking your account…</p></main>;
   return <>{children}</>;

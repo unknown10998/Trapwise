@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 test("route loading glint clears after navigation and is skipped with reduced motion", async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem("guest-session-v1", "active"));
   await page.goto("/");
   await page.locator("header").getByRole("link", { name: "Diagnostic" }).click();
   await expect(page.getByRole("heading", { name: "Adaptive Diagnostic" })).toBeVisible();

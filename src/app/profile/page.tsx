@@ -1,12 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import { getStreak, readProgressHistory } from "@/lib/dailyPractice";
 import { readDemoProfile, type DemoProfile } from "@/lib/demoMode";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
-import { readFromStorage, writeToStorage } from "@/lib/storage";
+import { readFromStorage, removeFromStorage, writeToStorage } from "@/lib/storage";
 import type { ProgressHistory } from "@/types/progress";
 
 type Snapshot = { demo: DemoProfile | null; history: ProgressHistory };
@@ -17,37 +17,50 @@ const empty: Snapshot = { demo: null, history: { version: 1, sessions: [] } };
 const emptyDetails: ProfileDetails = { name: "", description: "" };
 
 export default function ProfilePage() {
-  const { configured, user } = useAuth();
+  const { configured, user, guestMode } = useAuth();
   const [snapshot, setSnapshot] = useState(empty);
   const [details, setDetails] = useState(emptyDetails);
   const [draftName, setDraftName] = useState("");
   const [draftDescription, setDraftDescription] = useState("");
   const [message, setMessage] = useState("");
   const [saving, setSaving] = useState(false);
+  const hydratedProfileKey = useRef<string | null>(null);
+  const profileKey = user ? `${PROFILE_DETAILS_KEY}:user:${user.id}` : guestMode ? `${PROFILE_DETAILS_KEY}:guest` : `${PROFILE_DETAILS_KEY}:anonymous`;
+  const draftKey = `${profileKey}:draft`;
 
   useEffect(() => {
+    hydratedProfileKey.current = null;
     const frame = window.requestAnimationFrame(() => {
       setSnapshot({ demo: readDemoProfile(), history: readProgressHistory() });
-      const savedDetails = readFromStorage<ProfileDetails>(PROFILE_DETAILS_KEY, emptyDetails);
+      const savedDetails = readFromStorage<ProfileDetails>(profileKey, emptyDetails);
       const accountName = String(user?.user_metadata.display_name ?? "").trim();
       const accountDescription = String(user?.user_metadata.profile_description ?? "").trim();
-      const nextDetails = {
+      const savedAccountDetails = {
         name: savedDetails.name || accountName,
         description: savedDetails.description || accountDescription,
       };
-      setDetails(nextDetails);
-      setDraftName(nextDetails.name);
-      setDraftDescription(nextDetails.description);
+      const savedDraft = readFromStorage<ProfileDetails | null>(draftKey, null);
+      const nextDraft = savedDraft ?? savedAccountDetails;
+      setDetails(savedAccountDetails);
+      setDraftName(nextDraft.name);
+      setDraftDescription(nextDraft.description);
+      setMessage("");
+      hydratedProfileKey.current = profileKey;
     });
     return () => window.cancelAnimationFrame(frame);
-  }, [user]);
+  }, [draftKey, profileKey, user]);
+
+  useEffect(() => {
+    if (hydratedProfileKey.current !== profileKey) return;
+    writeToStorage<ProfileDetails>(draftKey, { name: draftName, description: draftDescription });
+  }, [draftDescription, draftKey, draftName, profileKey]);
 
   const demo = snapshot.demo?.enabled ? snapshot.demo : null;
   const latest = snapshot.history.sessions.at(-1);
   const streak = getStreak(snapshot.history);
   const fallbackName = user ? "Trapwise learner" : "Local learner";
-  const name = (demo?.name ?? details.name) || fallbackName;
-  const description = demo ? "A fictional local profile for exploring the judge demo." : details.description;
+  const name = (demo?.name ?? (user ? details.name : "Guest")) || fallbackName;
+  const description = demo ? "A fictional local profile for exploring the judge demo." : user ? details.description : guestMode ? "You are using a local guest account with full access to Trapwise practice features." : "You are exploring Trapwise as a guest. Continue as Guest to unlock the full local experience.";
   const mastery = demo?.mastery ?? latest?.masteryAfter ?? 0;
   const level = demo?.level ?? 1;
   const xp = demo?.xp ?? 0;
@@ -66,7 +79,8 @@ export default function ProfilePage() {
     }
 
     setSaving(true);
-    writeToStorage(PROFILE_DETAILS_KEY, nextDetails);
+    writeToStorage(profileKey, nextDetails);
+    removeFromStorage(draftKey);
     setDetails(nextDetails);
 
     if (!user) {
@@ -90,7 +104,7 @@ export default function ProfilePage() {
   }
 
   return <main className="mx-auto max-w-5xl px-4 py-10 sm:px-6 lg:px-8">
-    <p className="text-sm font-semibold uppercase text-emerald-700">Your profile</p>
+    <p className="text-sm font-semibold uppercase text-emerald-700">{user ? "Signed-in profile" : demo ? "Guest demo profile" : "Guest profile"}</p>
     <h1 className="mt-2 text-3xl font-bold text-slate-950">{name}</h1>
     <p className="mt-3 max-w-3xl text-slate-600">{description || "Add a short description so your learning profile feels like your own."}</p>
     <p className="mt-3 max-w-3xl text-sm text-slate-600">Your learning snapshot stays local unless you choose to connect a configured account. Trapwise Mastery is an internal learning estimate, not an official SAT score.</p>
@@ -99,7 +113,7 @@ export default function ProfilePage() {
     {!demo && <section className="mt-8 rounded-xl border border-slate-200 bg-white p-6 shadow-sm" aria-labelledby="profile-details-heading">
       <p className="text-sm font-semibold uppercase text-emerald-700">Profile details</p>
       <h2 id="profile-details-heading" className="mt-2 text-2xl font-bold text-slate-950">Make this profile yours</h2>
-      <p className="mt-2 text-sm text-slate-600">{user ? "These details are saved on this device and synced to your signed-in account." : "These details are saved only on this device until you sign in."}</p>
+      <p className="mt-2 text-sm text-slate-600">{user ? "These details are saved on this device and synced to your signed-in account." : guestMode ? "These details are saved locally for your guest account." : "These details are saved only on this device until you continue as Guest."}</p>
       <form className="mt-5 grid gap-4" onSubmit={(event) => void saveProfile(event)}>
         <label className="grid gap-1 text-sm font-medium text-slate-900" htmlFor="profile-name">Display name
           <input id="profile-name" value={draftName} onChange={(event) => setDraftName(event.target.value)} required minLength={2} maxLength={30} autoComplete="nickname" className="rounded-md border border-slate-300 bg-white p-2 text-slate-950" />

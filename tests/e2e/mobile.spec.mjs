@@ -31,6 +31,7 @@ test("diagnostic answers retain usable touch targets and separate choices", asyn
 
 test("mobile navigation traps focus, closes predictably, and reaches each local route", async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 568 });
+  await page.addInitScript(() => localStorage.setItem("guest-session-v1", "active"));
   await page.goto("/diagnostic");
   const menuButton = page.getByRole("button", { name: "Open navigation menu" });
   await expect(menuButton).toBeVisible();
@@ -40,12 +41,12 @@ test("mobile navigation traps focus, closes predictably, and reaches each local 
   await expect(drawer).toBeVisible();
   await expect(page.getByRole("button", { name: "Close navigation menu" }).last()).toBeFocused();
   await page.keyboard.press("Shift+Tab");
-  await expect(page.getByRole("link", { name: "Sign up" })).toBeFocused();
+  await expect(page.getByRole("button", { name: "Exit Guest Mode" })).toBeFocused();
   await page.keyboard.press("Escape");
   await expect(drawer).toBeHidden();
   await expect(menuButton).toBeFocused();
 
-  await page.getByRole("link", { name: "Trapwise home" }).click();
+  await page.getByRole("banner").getByRole("link", { name: "Trapwise home" }).click();
   await page.waitForURL("**/");
   for (const [label, route] of [["Diagnostic", "/diagnostic"], ["Daily Practice", "/daily"], ["Trap Forge", "/trap-forge"], ["Progress", "/progress"], ["Achievements", "/achievements"], ["Leaderboard", "/leaderboard"], ["Profile", "/profile"]]) {
     await menuButton.click();
