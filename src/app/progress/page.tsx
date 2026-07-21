@@ -1,7 +1,7 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useState } from "react";
+import { GuestAccessLink } from "@/components/GuestAccessLink";
 import { ProgressTimeline } from "@/components/ProgressTimeline";
 import { sampleQuestions } from "@/data/sampleQuestions";
 import { getStreak, readProgressHistory } from "@/lib/dailyPractice";
@@ -21,7 +21,7 @@ export default function ProgressPage() {
   const [history, setHistory] = useState<ProgressHistory>({ version: 1, sessions: [] }); const [demo, setDemo] = useState<DemoProfile | null>(null);
   useEffect(() => { const refresh = () => { setHistory(readProgressHistory(dataScope)); setDemo(readDemoProfile(dataScope)); }; const frame = window.requestAnimationFrame(refresh); const unsubscribeHistory = subscribeToStorage(scopedDataKey(dataScope, "progress-history-v1"), refresh); const unsubscribeDemo = subscribeToStorage(scopedDataKey(dataScope, "demo-profile-v1"), refresh); return () => { window.cancelAnimationFrame(frame); unsubscribeHistory(); unsubscribeDemo(); }; }, [dataScope]);
   if (loading) return <main className="mx-auto max-w-3xl px-4 py-10"><h1 className="text-2xl font-bold">Checking your learning data</h1></main>;
-  if (!history.sessions.length) return <main className="mx-auto max-w-3xl px-4 py-10"><p className="text-sm font-semibold uppercase text-emerald-700">Progress dashboard</p><h1 className="mt-2 text-3xl font-bold text-slate-950">Your progress story starts with one practice set.</h1><Link href="/daily" className="mt-6 inline-flex rounded-md bg-emerald-600 px-4 py-2 font-semibold text-white">Start Daily Practice</Link><QuestionFormatMix /></main>;
+  if (!history.sessions.length) return <main className="mx-auto max-w-3xl px-4 py-10"><p className="text-sm font-semibold uppercase text-emerald-700">Progress dashboard</p><h1 className="mt-2 text-3xl font-bold text-slate-950">Your progress story starts with one practice set.</h1><GuestAccessLink href="/daily" className="mt-6 inline-flex rounded-md bg-emerald-600 px-4 py-2 font-semibold text-white">Start Daily Practice</GuestAccessLink><QuestionFormatMix /></main>;
   const sessions = history.sessions; const latest = sessions.at(-1)!; const streak = getStreak(history);
   const total = sessions.reduce((sum, item) => sum + item.questionsAnswered, 0); const correct = sessions.reduce((sum, item) => sum + item.correctAnswers, 0); const weeklyChange = sessions.slice(-7).reduce((sum, item) => sum + item.masteryChange, 0);
   const difficulty = sessions.reduce<Record<number, { correct: number; total: number }>>((result, item) => { for (const [level, values] of Object.entries(item.difficultyPerformance)) { const current = result[Number(level)] ?? { correct: 0, total: 0 }; current.correct += values.correct; current.total += values.total; result[Number(level)] = current; } return result; }, {});

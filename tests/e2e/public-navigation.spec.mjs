@@ -3,6 +3,15 @@ import { expect, test } from "@playwright/test";
 const routes = ["/", "/diagnostic", "/results", "/daily", "/trap-forge", "/progress", "/achievements", "/leaderboard", "/profile", "/login", "/sign-up", "/settings"];
 const expectedAbort = (request) => request.failure()?.errorText === "net::ERR_ABORTED" && (request.url().includes("?_rsc=") || request.url().includes("&_rsc=") || request.url().includes("/_next/static/") || request.url().includes("/__nextjs_font/"));
 
+test("homepage Start Diagnostic opens in Guest Mode", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("link", { name: "Start Diagnostic", exact: true }).click();
+  await expect(page).toHaveURL(/\/diagnostic$/);
+  await expect(page.getByRole("heading", { name: "Adaptive Diagnostic" })).toBeVisible();
+  await expect.poll(() => page.evaluate(() => localStorage.getItem("guest-session-v1"))).toBe("active");
+  await expect(page.getByRole("link", { name: "Daily Practice", exact: true })).toBeVisible();
+});
+
 test("every release route loads directly and survives refresh/back/forward", async ({ page }) => {
   const failures = [];
   const consoleErrors = [];

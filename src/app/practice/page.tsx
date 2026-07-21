@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { GuestAccessLink } from "@/components/GuestAccessLink";
 
 export default function PracticePage() {
   return (
@@ -9,12 +9,12 @@ export default function PracticePage() {
         Focused practice against Mistake Twin patterns is planned for a later version. For now,
         use the diagnostic shell to test the first sample question and local answer selection.
       </p>
-      <Link
+      <GuestAccessLink
         href="/diagnostic"
         className="mt-6 inline-flex min-h-11 items-center justify-center rounded-md bg-emerald-600 px-4 py-2 font-semibold text-white hover:bg-emerald-700"
       >
         Start Diagnostic
-      </Link>
+      </GuestAccessLink>
     </main>
   );
 }

@@ -5,6 +5,7 @@ import { DailyPracticeCard } from "@/components/DailyPracticeCard";
 import { DemoControls } from "@/components/DemoControls";
 import { HomeLearningStatus } from "@/components/HomeLearningStatus";
 import { JudgeDemoLink } from "@/components/JudgeDemoLink";
+import { GuestAccessLink } from "@/components/GuestAccessLink";
 
 const steps = [
   ["Practice", "Start with a diagnostic or a short daily set."],
@@ -27,24 +28,24 @@ export default function Home() {
               Most test-prep apps show students what they got wrong. Trapwise discovers why by building a Mistake Twin that learns the traps a student falls for, then trains them to defeat those patterns.
             </p>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-              <Link
+              <GuestAccessLink
                 href="/diagnostic"
                 className="inline-flex min-h-12 items-center justify-center rounded-md bg-emerald-600 px-5 py-3 font-semibold text-white shadow-sm hover:bg-emerald-700"
               >
                 Start Diagnostic
-              </Link>
+              </GuestAccessLink>
               <Link
                 href="/results"
                 className="inline-flex min-h-12 items-center justify-center rounded-md border border-slate-300 px-5 py-3 font-semibold text-slate-800 hover:bg-slate-50"
               >
                 View Sample Results
               </Link>
-              <Link
+              <GuestAccessLink
                 href="/progress#question-formats"
                 className="inline-flex min-h-12 items-center justify-center rounded-md border border-slate-300 px-5 py-3 font-semibold text-slate-800 hover:bg-slate-50"
               >
                 Question Formats
-              </Link>
+              </GuestAccessLink>
             </div>
             <DemoControls />
           </div>

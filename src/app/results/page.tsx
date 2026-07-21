@@ -1,8 +1,8 @@
 "use client";
 
-import Link from "next/link";
 import { useSyncExternalStore } from "react";
 import { MistakeTwinCard } from "@/components/MistakeTwinCard";
+import { GuestAccessLink } from "@/components/GuestAccessLink";
 import { MistakeAnalysis } from "@/components/MistakeAnalysis";
 import { MistakeTwinReveal } from "@/components/MistakeTwinReveal";
 import { sampleQuestions } from "@/data/sampleQuestions";
@@ -100,17 +100,17 @@ export default function ResultsPage() {
             Practice {report.recommendedSkill.toLowerCase()} with clear attention to {report.mostCommonMistake}.
           </p>
           <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-            <Link href={`/follow-up${demoQuery}`} className="inline-flex min-h-11 items-center justify-center rounded-md bg-emerald-600 px-4 py-2 font-semibold text-white hover:bg-emerald-700">
+            <GuestAccessLink href={`/follow-up${demoQuery}`} className="inline-flex min-h-11 items-center justify-center rounded-md bg-emerald-600 px-4 py-2 font-semibold text-white hover:bg-emerald-700">
               Try Personalized Follow-Up
-            </Link>
-            <Link href={`/trap-forge${demoQuery}`} className="inline-flex min-h-11 items-center justify-center rounded-md border border-indigo-300 px-4 py-2 font-semibold text-indigo-800 hover:bg-indigo-50">Open Trap Forge</Link>
-            <Link
-              href="/diagnostic"
+            </GuestAccessLink>
+            <GuestAccessLink href={`/trap-forge${demoQuery}`} className="inline-flex min-h-11 items-center justify-center rounded-md border border-indigo-300 px-4 py-2 font-semibold text-indigo-800 hover:bg-indigo-50">Open Trap Forge</GuestAccessLink>
+              <GuestAccessLink
+                href="/diagnostic"
               onClick={() => { if (judgeDemo) resetDemoMode(); writeToStorage<SavedDiagnostic>(scopedDataKey(dataScope, "adaptive-diagnostic"), { records: [], stopReason: null }); }}
               className="inline-flex min-h-11 items-center justify-center rounded-md border border-slate-300 px-4 py-2 font-semibold text-slate-800 hover:bg-slate-50"
             >
               Restart Diagnostic
-            </Link>
+              </GuestAccessLink>
           </div>
         </div>
       </section>
@@ -148,9 +148,9 @@ function EmptyResults() {
     <main className="mx-auto max-w-3xl px-4 py-10 sm:px-6 lg:px-8">
       <p className="text-sm font-semibold uppercase tracking-normal text-emerald-700">No diagnostic yet</p>
       <h1 className="mt-2 text-3xl font-bold text-slate-950">Start a diagnostic to build your Trapwise profile.</h1>
-      <Link href="/diagnostic" className="mt-6 inline-flex min-h-11 items-center justify-center rounded-md bg-emerald-600 px-4 py-2 font-semibold text-white hover:bg-emerald-700">
+      <GuestAccessLink href="/diagnostic" className="mt-6 inline-flex min-h-11 items-center justify-center rounded-md bg-emerald-600 px-4 py-2 font-semibold text-white hover:bg-emerald-700">
         Start Diagnostic
-      </Link>
+      </GuestAccessLink>
     </main>
   );
 }

@@ -17,7 +17,7 @@ const getMountedSnapshot = () => true;
 const getServerMountedSnapshot = () => false;
 
 export function Header() {
-  const { user, loading, guestMode, signOut } = useAuth();
+  const { user, loading, guestMode, signOut, continueAsGuest } = useAuth();
   const hasAccess = Boolean(user || guestMode);
   const router = useRouter();
   const pathname = usePathname();
@@ -55,6 +55,8 @@ export function Header() {
   }, [mobileOpen]);
 
   function requestPageGlint(href?: string) {
+    const guestRoutes = ["/diagnostic", "/daily", "/trap-forge", "/follow-up", "/results", "/progress", "/achievements", "/leaderboard", "/profile", "/settings", "/impact", "/practice", "/challenges"];
+    if (href && guestRoutes.includes(href) && !user && !guestMode) continueAsGuest();
     if (href === pathname) return;
     startRouteLoadingGlint();
   }
