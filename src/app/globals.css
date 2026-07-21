@@ -117,6 +117,13 @@ button {
 .theme-swatch-tilt { background: linear-gradient(135deg, #eeeaff 40%, #7551d7 40% 70%, #ffcf70 70%); transform: rotate(-7deg); }
 .theme-notice-copy { color: var(--container-ink, var(--notice-ink)); }
 
+@media (min-width: 1024px) {
+  .site-header .nav-group,
+  .site-header .nav-group a,
+  .site-header .nav-group button,
+  .theme-settings-panel .theme-option { white-space: nowrap; }
+}
+
 :root[data-theme="midnight"] body { color-scheme: dark; }
 :root[data-theme] .bg-white, :root[data-theme] .bg-white\/90 { --container-surface: var(--surface); --container-ink: var(--foreground); --container-muted: color-mix(in srgb, var(--foreground) 72%, var(--surface)); --container-accent: var(--accent-ink); background-color: var(--surface) !important; color: var(--container-ink) !important; }
 :root[data-theme] .bg-slate-50, :root[data-theme] .bg-slate-100 { --container-surface: color-mix(in srgb, var(--surface) 82%, var(--accent-soft)); --container-ink: var(--foreground); --container-muted: color-mix(in srgb, var(--foreground) 72%, var(--container-surface)); --container-accent: var(--accent-ink); background-color: var(--container-surface) !important; color: var(--container-ink) !important; }
