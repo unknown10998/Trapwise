@@ -11,18 +11,23 @@ const demoHistory: ProgressHistory = { version: 1, sessions: [
 ] };
 export const fictionalDemoProfile: DemoProfile = { enabled: true, name: "Avery Park (Demo)", mastery: 72, xp: 640, level: 3, streak: 5, achievementKeys: ["first-step", "diagnostic-complete", "pattern-breaker", "three-day-spark"], trapForgeRounds: 2, leaderboardRank: 4, dominantMistake: "solved wrong value" };
 const guestScope: DataScope = "guest";
+export const judgeDemoDiagnosticKey = "judge-demo-diagnostic-v1";
 export function readDemoProfile(scope: DataScope = guestScope) { return scope === guestScope ? readFromStorage<DemoProfile | null>(scopedDataKey(guestScope, profileKey), readFromStorage<DemoProfile | null>(profileKey, null)) : null; }
 export function startDemoMode() {
   const existingHistory = readProgressHistory(guestScope);
   if (existingHistory.sessions.length && !readFromStorage<ProgressHistory | null>(scopedDataKey(guestScope, savedHistoryKey), null)) writeToStorage(scopedDataKey(guestScope, savedHistoryKey), existingHistory);
   writeToStorage(scopedDataKey(guestScope, profileKey), fictionalDemoProfile);
   writeToStorage(scopedDataKey(guestScope, "progress-history-v1"), demoHistory);
+  writeToStorage(scopedDataKey(guestScope, judgeDemoDiagnosticKey), { records: [], stopReason: null });
   removeFromStorage(scopedDataKey(guestScope, "follow-up-v1")); removeFromStorage(scopedDataKey(guestScope, "trap-forge-v1")); removeFromStorage(scopedDataKey(guestScope, "mistake-twin-impact-v1"));
+}
+export function ensureDemoMode() {
+  if (!readDemoProfile(guestScope)?.enabled) startDemoMode();
 }
 export function resetDemoMode() {
   if (typeof window === "undefined") return;
   const previousHistory = readFromStorage<ProgressHistory | null>(scopedDataKey(guestScope, savedHistoryKey), null);
   removeFromStorage(scopedDataKey(guestScope, profileKey)); removeFromStorage(profileKey);
   if (previousHistory) { writeToStorage(scopedDataKey(guestScope, "progress-history-v1"), previousHistory); removeFromStorage(scopedDataKey(guestScope, savedHistoryKey)); } else removeFromStorage(scopedDataKey(guestScope, "progress-history-v1"));
-  removeFromStorage(scopedDataKey(guestScope, "adaptive-diagnostic")); removeFromStorage(scopedDataKey(guestScope, "follow-up-v1")); removeFromStorage(scopedDataKey(guestScope, "trap-forge-v1")); removeFromStorage(scopedDataKey(guestScope, "mistake-twin-impact-v1"));
+  removeFromStorage(scopedDataKey(guestScope, judgeDemoDiagnosticKey)); removeFromStorage(scopedDataKey(guestScope, "follow-up-v1")); removeFromStorage(scopedDataKey(guestScope, "trap-forge-v1")); removeFromStorage(scopedDataKey(guestScope, "mistake-twin-impact-v1"));
 }

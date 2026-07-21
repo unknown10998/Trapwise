@@ -3,12 +3,15 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { resetDemoMode, startDemoMode } from "@/lib/demoMode";
+import { useAuth } from "@/components/AuthProvider";
 
 export function DemoControls() {
   const router = useRouter();
+  const { continueAsGuest } = useAuth();
   const [notice, setNotice] = useState("");
 
   function startDemo() {
+    continueAsGuest();
     startDemoMode();
     setNotice("Fictional demo profile loaded. The five-question judge diagnostic opens next; Question 1, choice C reliably reveals the Solved Wrong Value pattern.");
     window.setTimeout(() => router.push("/diagnostic?judgeDemo=1"), 500);

@@ -60,7 +60,6 @@ The application uses Next.js 16, React 19, TypeScript, Tailwind CSS 4, browser `
 
 ## Codex and GPT-5.6 usage
 
-Codex was used as a development collaborator for the typed question model, deterministic adaptive and Mistake Twin logic, UI implementation, local fallback behavior, accessibility checks, and production build verification.
 
 For an OpenAI Build Week submission, describe the specific GPT-5.6 work from the primary build session in your own words and include that session's `/feedback` ID. Do not claim a model, workflow, or capability that was not actually used.
 

@@ -11,7 +11,7 @@ import { buildDiagnosticReport } from "@/lib/diagnosticReport";
 import { localDate, readProgressHistory, saveProgressHistory } from "@/lib/dailyPractice";
 import { readScopedFromStorage, scopedDataKey, writeToStorage } from "@/lib/storage";
 import { playCorrectAnswerSound } from "@/lib/sounds";
-import { startDemoMode } from "@/lib/demoMode";
+import { ensureDemoMode, judgeDemoDiagnosticKey, readDemoProfile, resetDemoMode } from "@/lib/demoMode";
 import { useAuth } from "@/components/AuthProvider";
 import type { AnswerChoiceId, AnswerRecord, Confidence, SATQuestion } from "@/types/question";
 
@@ -31,20 +31,32 @@ export default function DiagnosticPage() {
   const [confidence, setConfidence] = useState<Confidence>(null);
   const [records, setRecords] = useState<AnswerRecord[]>([]);
   const [question, setQuestion] = useState<SATQuestion>(fixedDiagnosticQuestions[0]);
-  const [selectionNote, setSelectionNote] = useState("Start with five foundation-to-challenge questions.");
   const [judgeDemo, setJudgeDemo] = useState(false);
 
   const questionNumber = records.length + 1;
-  const wasAdaptive = records.length >= fixedDiagnosticQuestions.length;
+  const wasAdaptive = !judgeDemo && records.length >= fixedDiagnosticQuestions.length;
+  const storageScope = judgeDemo ? "guest" : dataScope;
+  const diagnosticKey = judgeDemo ? judgeDemoDiagnosticKey : "adaptive-diagnostic";
 
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => {
       const isJudgeDemo = new URLSearchParams(window.location.search).get("judgeDemo") === "1";
       setJudgeDemo(isJudgeDemo);
       if (isJudgeDemo) {
-        startDemoMode();
+        ensureDemoMode();
+        const savedDemo = readScopedFromStorage<SavedDiagnostic>("guest", judgeDemoDiagnosticKey, { records: [], stopReason: null });
+        if (savedDemo.stopReason) {
+          router.replace("/results?judgeDemo=1");
+          return;
+        }
+        const nextDemoQuestion = fixedDiagnosticQuestions[savedDemo.records.length];
+        if (savedDemo.records.length > 0 && nextDemoQuestion) {
+          setRecords(savedDemo.records);
+          setQuestion(nextDemoQuestion);
+        }
         return;
       }
+      if (readDemoProfile("guest")?.enabled) resetDemoMode();
 
       const saved = readScopedFromStorage<SavedDiagnostic>(dataScope, "adaptive-diagnostic", { records: [], stopReason: null });
       if (saved.stopReason) {
@@ -57,7 +69,6 @@ export default function DiagnosticPage() {
       if (nextFixed) {
         setRecords(saved.records);
         setQuestion(nextFixed);
-        setSelectionNote("Resumed your saved diagnostic.");
         return;
       }
       const decision = getAdaptiveDecision({
@@ -71,7 +82,6 @@ export default function DiagnosticPage() {
       if (decision.kind === "next") {
         setRecords(saved.records);
         setQuestion(decision.question);
-        setSelectionNote("Resumed your saved diagnostic. " + decision.reason);
       }
     });
     return () => window.cancelAnimationFrame(frame);
@@ -80,10 +90,10 @@ export default function DiagnosticPage() {
   if (loading) return <main className="mx-auto max-w-4xl px-4 py-10"><h1 className="text-2xl font-bold">Checking your practice data</h1></main>;
 
   function finishDiagnostic(updatedRecords: AnswerRecord[], stopReason: DiagnosticStopReason) {
-    writeToStorage<SavedDiagnostic>(scopedDataKey(dataScope, "adaptive-diagnostic"), { records: updatedRecords, stopReason });
+    writeToStorage<SavedDiagnostic>(scopedDataKey(storageScope, diagnosticKey), { records: updatedRecords, stopReason });
     const report = buildDiagnosticReport(updatedRecords, stopReason);
     const sessionId = `diagnostic-${localDate()}-${updatedRecords[0]?.questionId ?? "session"}`;
-    const history = readProgressHistory(dataScope);
+    const history = readProgressHistory(storageScope);
     if (!history.sessions.some((session) => session.sessionId === sessionId)) {
       const difficultyPerformance = updatedRecords.reduce<Record<number, { correct: number; total: number }>>((result, record) => {
         const current = result[record.difficultyLevel] ?? { correct: 0, total: 0 };
@@ -100,9 +110,9 @@ export default function DiagnosticPage() {
         accuracy: report.accuracy, masteryBefore: updatedRecords[0]?.masteryBefore ?? 50, masteryAfter: report.mastery,
         masteryChange: report.mastery - (updatedRecords[0]?.masteryBefore ?? 50), strongestSkill: report.strongestSkill, weakestSkill: report.weakestSkill,
         dominantMistake: report.mostCommonMistake, difficultyPerformance, confidencePerformance, correctedMistakes: 0, questionIds: updatedRecords.map((record) => record.questionId), visualPerformance: { answered: visualAnswers.length, correct: visualAnswers.filter((record) => record.isCorrect).length, visualMisinterpretations: visualAnswers.filter((record) => record.mistakeCategory === "visual_misinterpretation").length, byCategory: visualPerformance },
-      }] }, dataScope);
+      }] }, storageScope);
     }
-    router.push("/results");
+    router.push(judgeDemo ? "/results?judgeDemo=1" : "/results");
   }
 
   function handleSubmit() {
@@ -131,11 +141,10 @@ export default function DiagnosticPage() {
     nextRecord.masteryAfter = estimateMastery(provisionalRecords);
     const updatedRecords = [...records, nextRecord];
     setRecords(updatedRecords);
-    writeToStorage<SavedDiagnostic>(scopedDataKey(dataScope, "adaptive-diagnostic"), { records: updatedRecords, stopReason: null });
+    writeToStorage<SavedDiagnostic>(scopedDataKey(storageScope, diagnosticKey), { records: updatedRecords, stopReason: null });
 
     if (updatedRecords.length < fixedDiagnosticQuestions.length) {
       setQuestion(fixedDiagnosticQuestions[updatedRecords.length]);
-      setSelectionNote("Continue through the fixed diagnostic sequence.");
     } else if (judgeDemo) {
       finishDiagnostic(updatedRecords, "maximum_questions");
       return;
@@ -153,10 +162,6 @@ export default function DiagnosticPage() {
         return;
       }
       setQuestion(decision.question);
-      setSelectionNote(decision.reason);
-      if (process.env.NODE_ENV !== "production") {
-        console.info("Trapwise adaptive selection", decision);
-      }
     }
 
     setSelectedChoice(null);
@@ -173,8 +178,7 @@ export default function DiagnosticPage() {
     setQuestion(previousQuestion);
     setSelectedChoice(previous.selectedChoice);
     setConfidence(previous.confidence);
-    setSelectionNote("You can change this saved answer before continuing.");
-    writeToStorage<SavedDiagnostic>(scopedDataKey(dataScope, "adaptive-diagnostic"), { records: remaining, stopReason: null });
+    writeToStorage<SavedDiagnostic>(scopedDataKey(storageScope, diagnosticKey), { records: remaining, stopReason: null });
   }
 
   return (
@@ -182,16 +186,16 @@ export default function DiagnosticPage() {
       <div className="mb-8">
         {judgeDemo && <p className="mb-4 rounded-lg border border-indigo-200 bg-indigo-50 p-3 text-sm leading-6 text-indigo-950"><strong>Judge Demo:</strong> this is a fixed five-question local flow. On Question 1, choose <strong>C</strong> to reveal the deterministic <strong>Solved Wrong Value</strong> Mistake Twin pattern; no account, API key, or Supabase setup is required.</p>}
         <p className="text-sm font-semibold uppercase tracking-normal text-emerald-700">{question.subject}</p>
-        <h1 className="mt-2 text-3xl font-bold text-slate-950">Adaptive Diagnostic</h1>
+        <h1 className="mt-2 text-3xl font-bold text-slate-950">{judgeDemo ? "Judge Demo Diagnostic" : "Adaptive Diagnostic"}</h1>
         <p className="mt-2 text-sm leading-6 text-slate-600">
-          {wasAdaptive ? `Question ${questionNumber} • Adaptive Practice` : `Question ${questionNumber} • Diagnostic Foundations`}
+          {judgeDemo ? `Judge Demo — Question ${questionNumber} of 5` : wasAdaptive ? `Question ${questionNumber} • Adaptive Practice` : `Question ${questionNumber} • Diagnostic Foundations`}
         </p>
         <div className="mt-5">
           <div className="mb-2 flex items-center justify-between text-sm text-slate-600">
             <span>Estimated progress</span>
-            <span>{wasAdaptive ? "Building your topic profile" : "Establishing your starting point"}</span>
+            <span>{judgeDemo ? "Fixed five-question judge flow" : wasAdaptive ? "Building your topic profile" : "Establishing your starting point"}</span>
           </div>
-          <ProgressBar current={questionNumber} total={15} label="Diagnostic progress" />
+          <ProgressBar current={questionNumber} total={judgeDemo ? 5 : 15} label={judgeDemo ? "Judge demo progress" : "Diagnostic progress"} />
         </div>
       </div>
 
@@ -227,10 +231,6 @@ export default function DiagnosticPage() {
           Submit Answer
         </button>
       </div>
-
-      {process.env.NODE_ENV !== "production" && (
-        <p className="mt-6 text-xs text-slate-400">Developer note: {selectionNote}</p>
-      )}
     </main>
   );
 }

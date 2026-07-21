@@ -26,6 +26,8 @@ function Score({ label, value }: { label: string; value: number }) {
 
 export default function TrapForgePage() {
   const { dataScope, loading } = useAuth();
+  const judgeDemo = typeof window !== "undefined" && new URLSearchParams(window.location.search).get("judgeDemo") === "1";
+  const forgeScope = judgeDemo ? "guest" : dataScope;
   const [distractor, setDistractor] = useState("");
   const [explanation, setExplanation] = useState("");
   const [complete, setComplete] = useState(false);
@@ -37,17 +39,17 @@ export default function TrapForgePage() {
   useEffect(() => {
     if (loading) return;
     const frame = window.requestAnimationFrame(() => {
-      const saved = readScopedFromStorage<SavedForge>(dataScope, FORGE_KEY, EMPTY_FORGE);
+      const saved = readScopedFromStorage<SavedForge>(forgeScope, FORGE_KEY, EMPTY_FORGE);
       const hasForgeDraft = typeof saved.distractor === "string" && typeof saved.explanation === "string";
       setDistractor(hasForgeDraft ? saved.distractor ?? "" : "");
       setExplanation(hasForgeDraft ? saved.explanation ?? "" : "");
       setEvaluation(hasForgeDraft ? saved.evaluation ?? null : null);
       setComplete(Boolean(hasForgeDraft && saved.complete && saved.evaluation?.isValidTrap));
       setRewarded(Boolean(hasForgeDraft && saved.rewarded));
-      setDemoActive(Boolean(readDemoProfile(dataScope)?.enabled));
+      setDemoActive(Boolean(readDemoProfile(forgeScope)?.enabled));
     });
     return () => window.cancelAnimationFrame(frame);
-  }, [dataScope, loading]);
+  }, [dataScope, forgeScope, loading]);
 
   function checkForge() {
     if (complete) return;
@@ -61,25 +63,25 @@ export default function TrapForgePage() {
       expectedTrap: "2",
       requiredReasoningTerms: ["x", "y"],
     });
-    const storedForge = readScopedFromStorage<SavedForge>(dataScope, FORGE_KEY, EMPTY_FORGE);
+    const storedForge = readScopedFromStorage<SavedForge>(forgeScope, FORGE_KEY, EMPTY_FORGE);
     const prior = typeof storedForge.distractor === "string" && typeof storedForge.explanation === "string" ? storedForge : EMPTY_FORGE;
     const shouldAward = demoActive && nextEvaluation.isValidTrap && !prior.rewarded;
     const isComplete = nextEvaluation.isValidTrap;
 
     if (isComplete) {
-      const impact = readPatternImpact(dataScope);
+      const impact = readPatternImpact(forgeScope);
       if (impact) {
         savePatternImpact({
           ...impact,
           afterForge: Math.max(0, (impact.afterFollowUp ?? impact.before) - 8),
           forgeRecognized: true,
-        }, dataScope);
+        }, forgeScope);
       }
     }
 
     if (shouldAward) {
-      const profile = readDemoProfile(dataScope) ?? fictionalDemoProfile;
-      writeToStorage(scopedDataKey(dataScope, "demo-profile-v1"), {
+      const profile = readDemoProfile(forgeScope) ?? fictionalDemoProfile;
+      writeToStorage(scopedDataKey(forgeScope, "demo-profile-v1"), {
         ...profile,
         xp: profile.xp + 20,
         trapForgeRounds: profile.trapForgeRounds + 1,
@@ -94,7 +96,7 @@ export default function TrapForgePage() {
       evaluation: nextEvaluation,
       rewarded: prior.rewarded || shouldAward,
     };
-    writeToStorage(scopedDataKey(dataScope, FORGE_KEY), savedForge);
+    writeToStorage(scopedDataKey(forgeScope, FORGE_KEY), savedForge);
     setEvaluation(nextEvaluation);
     setRewarded(savedForge.rewarded);
     setAwardedThisAttempt(shouldAward);
@@ -144,7 +146,7 @@ export default function TrapForgePage() {
       {evaluation.isValidTrap && <>
         {rewarded && !awardedThisAttempt && demoActive && <p className="mt-3 text-sm text-slate-600">The fictional-demo reward was already applied for this completed round.</p>}
         {!demoActive && <p className="mt-3 text-sm text-slate-600">Local practice is complete. XP is shown only for the clearly labeled fictional judge demo.</p>}
-        <Link href="/impact" className="mt-4 inline-flex rounded-md bg-emerald-600 px-4 py-2 font-semibold text-white">See before-and-after impact</Link>
+        <Link href={`/impact${judgeDemo ? "?judgeDemo=1" : ""}`} className="mt-4 inline-flex rounded-md bg-emerald-600 px-4 py-2 font-semibold text-white">See before-and-after impact</Link>
       </>}
     </section>}
   </main>;

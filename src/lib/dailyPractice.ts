@@ -198,7 +198,7 @@ export function buildDailyProgressRecord(session: DailyPracticeSession): Progres
   return { sessionId: session.sessionId, sessionType: "daily", date: session.date, questionsAnswered: session.answers.length, correctAnswers,
     accuracy: Math.round((correctAnswers / session.answers.length) * 100), masteryBefore: session.startingMastery, masteryAfter: endingMastery, masteryChange: change,
     strongestSkill: session.targetSkill, weakestSkill: session.targetSkill, dominantMistake: session.targetMistakeCategory?.replaceAll("_", " ") ?? "No repeated mistake",
-    difficultyPerformance, confidencePerformance, correctedMistakes, questionIds: session.selectedQuestionIds, visualPerformance: { answered: visualAnswers.length, correct: visualAnswers.filter((answer) => answer.isCorrect).length, visualMisinterpretations: visualAnswers.filter((answer) => answer.mistakeCategory === "visual_misinterpretation").length, byCategory: visualPerformance } };
+    difficultyPerformance, confidencePerformance, correctedMistakes, questionIds: session.selectedQuestionIds, reasoningResponses: session.answers.filter((answer) => answer.reasoning?.trim()).map((answer) => ({ questionId: answer.questionId, reasoning: answer.reasoning!.trim() })), visualPerformance: { answered: visualAnswers.length, correct: visualAnswers.filter((answer) => answer.isCorrect).length, visualMisinterpretations: visualAnswers.filter((answer) => answer.mistakeCategory === "visual_misinterpretation").length, byCategory: visualPerformance } };
 }
 
 export function getStreak(history: ProgressHistory, today = localDate()) {

@@ -7,6 +7,7 @@ const guestKeys = [
   "demo-profile-v1",
   "pre-demo-progress-history-v1",
   "adaptive-diagnostic",
+  "judge-demo-diagnostic-v1",
   "follow-up-v1",
   "trap-forge-v1",
   "mistake-twin-impact-v1",

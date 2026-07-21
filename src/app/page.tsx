@@ -4,6 +4,7 @@ import { SubjectCard } from "@/components/SubjectCard";
 import { DailyPracticeCard } from "@/components/DailyPracticeCard";
 import { DemoControls } from "@/components/DemoControls";
 import { HomeLearningStatus } from "@/components/HomeLearningStatus";
+import { JudgeDemoLink } from "@/components/JudgeDemoLink";
 
 const steps = [
   ["Practice", "Start with a diagnostic or a short daily set."],
@@ -61,7 +62,7 @@ export default function Home() {
       <section className="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
         <div className="grid gap-5 rounded-2xl border border-indigo-200 bg-indigo-50 p-6 shadow-sm md:grid-cols-[1fr_auto] md:items-center">
           <div><p className="text-sm font-semibold uppercase tracking-normal text-indigo-700">Judge Quick Test</p><h2 className="mt-2 text-2xl font-bold text-slate-950">See the full Mistake Twin loop in 3–5 minutes.</h2><ol className="mt-4 grid gap-1 text-sm text-slate-700 sm:grid-cols-2"><li>1. Load the fictional demo profile</li><li>2. Take the short diagnostic</li><li>3. Reveal the Mistake Twin</li><li>4. Complete the targeted follow-up</li><li>5. Try Trap Forge</li><li>6. View your progress</li></ol></div>
-          <Link href="/diagnostic?judgeDemo=1" className="inline-flex min-h-12 items-center justify-center rounded-md bg-indigo-700 px-5 py-3 font-semibold text-white">Start Judge Flow</Link>
+          <JudgeDemoLink />
         </div>
       </section>
 

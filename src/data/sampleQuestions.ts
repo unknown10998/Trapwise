@@ -121,7 +121,8 @@ const bank: SATQuestion[] = [
 ];
 
 /** One early graph keeps the five-question foundation diagnostic visually varied. */
-export const fixedDiagnosticQuestions = [bank[0], bank[1], bank.find((question) => question.id === "visual-026")!, bank[2], bank[3]];
+export const judgeDemoQuestionIds = ["systems-nonlinear-001", "systems-nonlinear-002", "visual-026", "systems-nonlinear-003", "systems-nonlinear-004"] as const;
+export const fixedDiagnosticQuestions = judgeDemoQuestionIds.map((id) => bank.find((question) => question.id === id)!);
 export const sampleQuestions = bank;
 /** Lightweight scenario check for the reviewed in-repo bank; CI/type checks can import it without a test runner. */
 export const visualQuestionValidationErrors = bank.flatMap((item) => validateQuestionVisual(item).errors.map((error) => `${item.id}: ${error}`));

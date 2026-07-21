@@ -10,6 +10,8 @@ export type DailyAnswer = {
   mistakeCategory: MistakeCategory | null;
   difficultyLevel: DifficultyLevel;
   primarySkill: string;
+  /** Optional learner explanation used as Mistake Twin evidence. */
+  reasoning?: string;
   isVisual?: boolean;
   visualCategory?: string;
 };
@@ -44,6 +46,7 @@ export type ProgressRecord = {
   confidencePerformance: Record<string, { correct: number; total: number }>;
   correctedMistakes: number;
   questionIds: string[];
+  reasoningResponses?: { questionId: string; reasoning: string }[];
   visualPerformance?: { answered: number; correct: number; visualMisinterpretations: number; byCategory: Record<string, { correct: number; total: number }> };
 };
 

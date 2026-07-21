@@ -12,6 +12,7 @@ import { scopedDataKey, type DataScope } from "@/lib/storage";
 import { useAuth } from "@/components/AuthProvider";
 import { buildMistakeTwinProfile } from "@/lib/mistakeTwinEngine";
 import { patternStrength } from "@/lib/mistakeTwinProgress";
+import { judgeDemoDiagnosticKey, resetDemoMode } from "@/lib/demoMode";
 import type { AnswerRecord } from "@/types/question";
 import type { DiagnosticStopReason } from "@/lib/adaptiveEngine";
 
@@ -20,13 +21,15 @@ const EMPTY_DIAGNOSTIC: SavedDiagnostic = { records: [], stopReason: null };
 let cachedDiagnosticValue: string | null | undefined;
 let cachedDiagnosticSnapshot: SavedDiagnostic = EMPTY_DIAGNOSTIC;
 let cachedDiagnosticScope: DataScope | null = null;
+let cachedDiagnosticKey: string | null = null;
 
-function getDiagnosticSnapshot(scope: DataScope): SavedDiagnostic {
-  const scopedKey = `trapwise:${scopedDataKey(scope, "adaptive-diagnostic")}`;
-  const storedValue = window.localStorage.getItem(scopedKey) ?? (scope === "guest" ? window.localStorage.getItem("trapwise:adaptive-diagnostic") : null);
-  if (storedValue === cachedDiagnosticValue && scope === cachedDiagnosticScope) return cachedDiagnosticSnapshot;
+function getDiagnosticSnapshot(scope: DataScope, diagnosticKey: string): SavedDiagnostic {
+  const scopedKey = `trapwise:${scopedDataKey(scope, diagnosticKey)}`;
+  const storedValue = window.localStorage.getItem(scopedKey) ?? (scope === "guest" && diagnosticKey === "adaptive-diagnostic" ? window.localStorage.getItem("trapwise:adaptive-diagnostic") : null);
+  if (storedValue === cachedDiagnosticValue && scope === cachedDiagnosticScope && diagnosticKey === cachedDiagnosticKey) return cachedDiagnosticSnapshot;
   cachedDiagnosticValue = storedValue;
   cachedDiagnosticScope = scope;
+  cachedDiagnosticKey = diagnosticKey;
   try {
     cachedDiagnosticSnapshot = storedValue ? (JSON.parse(storedValue) as SavedDiagnostic) : EMPTY_DIAGNOSTIC;
   } catch {
@@ -37,9 +40,12 @@ function getDiagnosticSnapshot(scope: DataScope): SavedDiagnostic {
 
 export default function ResultsPage() {
   const { dataScope, loading } = useAuth();
+  const judgeDemo = typeof window !== "undefined" && new URLSearchParams(window.location.search).get("judgeDemo") === "1";
+  const resultsScope = judgeDemo ? "guest" : dataScope;
+  const resultsDiagnosticKey = judgeDemo ? judgeDemoDiagnosticKey : "adaptive-diagnostic";
   const saved = useSyncExternalStore(
     () => () => undefined,
-    () => loading ? EMPTY_DIAGNOSTIC : getDiagnosticSnapshot(dataScope),
+    () => loading ? EMPTY_DIAGNOSTIC : getDiagnosticSnapshot(resultsScope, resultsDiagnosticKey),
     () => EMPTY_DIAGNOSTIC,
   );
   if (loading) return <main className="mx-auto max-w-3xl px-4 py-10"><h1 className="text-2xl font-bold">Checking your results</h1></main>;
@@ -51,6 +57,7 @@ export default function ResultsPage() {
   const dominantCategory = twinProfile.dominantMistake === "none" ? "unknown" : twinProfile.dominantMistake;
   const strength = patternStrength(saved.records, dominantCategory);
   const dominantDifficulty = Math.max(1, ...saved.records.filter((record) => record.mistakeCategory === dominantCategory).map((record) => record.difficultyLevel));
+  const demoQuery = judgeDemo ? "?judgeDemo=1" : "";
 
   return (
     <main className="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
@@ -93,13 +100,13 @@ export default function ResultsPage() {
             Practice {report.recommendedSkill.toLowerCase()} with clear attention to {report.mostCommonMistake}.
           </p>
           <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-            <Link href="/follow-up" className="inline-flex min-h-11 items-center justify-center rounded-md bg-emerald-600 px-4 py-2 font-semibold text-white hover:bg-emerald-700">
+            <Link href={`/follow-up${demoQuery}`} className="inline-flex min-h-11 items-center justify-center rounded-md bg-emerald-600 px-4 py-2 font-semibold text-white hover:bg-emerald-700">
               Try Personalized Follow-Up
             </Link>
-            <Link href="/trap-forge" className="inline-flex min-h-11 items-center justify-center rounded-md border border-indigo-300 px-4 py-2 font-semibold text-indigo-800 hover:bg-indigo-50">Open Trap Forge</Link>
+            <Link href={`/trap-forge${demoQuery}`} className="inline-flex min-h-11 items-center justify-center rounded-md border border-indigo-300 px-4 py-2 font-semibold text-indigo-800 hover:bg-indigo-50">Open Trap Forge</Link>
             <Link
               href="/diagnostic"
-              onClick={() => writeToStorage<SavedDiagnostic>(scopedDataKey(dataScope, "adaptive-diagnostic"), { records: [], stopReason: null })}
+              onClick={() => { if (judgeDemo) resetDemoMode(); writeToStorage<SavedDiagnostic>(scopedDataKey(dataScope, "adaptive-diagnostic"), { records: [], stopReason: null }); }}
               className="inline-flex min-h-11 items-center justify-center rounded-md border border-slate-300 px-4 py-2 font-semibold text-slate-800 hover:bg-slate-50"
             >
               Restart Diagnostic

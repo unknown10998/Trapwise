@@ -12,3 +12,13 @@ test("Daily Practice recovers from invalid local storage with a bounded local se
   await page.reload();
   await expect(page.getByRole("heading", { name: "Daily Practice" })).toBeVisible();
 });
+
+test("Daily Practice saves written reasoning as Mistake Twin evidence", async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem("guest-session-v1", "active"));
+  await page.goto("/daily");
+  await expect(page.getByRole("heading", { name: "Daily Practice" })).toBeVisible();
+  await page.getByLabel("Your reasoning for this question").fill("I compared the two values first, then checked the exact quantity the question asked for.");
+  await page.getByTestId(/answer-[ABCD]/).first().click();
+  await page.getByRole("button", { name: "Check Answer" }).click();
+  await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem("trapwise:data:guest:daily-session-v1") ?? "{}").answers?.[0]?.reasoning)).toBe("I compared the two values first, then checked the exact quantity the question asked for.");
+});

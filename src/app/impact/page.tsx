@@ -7,13 +7,15 @@ import { readPatternImpact, type PatternImpact } from "@/lib/mistakeTwinProgress
 
 export default function ImpactPage() {
   const { dataScope, loading } = useAuth();
+  const judgeDemo = typeof window !== "undefined" && new URLSearchParams(window.location.search).get("judgeDemo") === "1";
+  const impactScope = judgeDemo ? "guest" : dataScope;
   const [impact, setImpact] = useState<PatternImpact | null>(null);
 
   useEffect(() => {
     if (loading) return;
-    const frame = window.requestAnimationFrame(() => setImpact(readPatternImpact(dataScope)));
+    const frame = window.requestAnimationFrame(() => setImpact(readPatternImpact(impactScope)));
     return () => window.cancelAnimationFrame(frame);
-  }, [dataScope, loading]);
+  }, [dataScope, impactScope, loading]);
 
   if (loading) return <main className="mx-auto max-w-3xl px-4 py-10"><h1 className="text-2xl font-bold">Checking your learning data</h1></main>;
   if (!impact) return <main className="mx-auto max-w-3xl px-4 py-10"><h1 className="text-3xl font-bold">No pattern change yet</h1><p className="mt-3 text-slate-600">Complete a Mistake Twin follow-up and Trap Forge round to see before-and-after impact.</p><Link href="/diagnostic" className="mt-6 inline-flex rounded-md bg-indigo-700 px-4 py-2 font-semibold text-white">Start diagnostic</Link></main>;
