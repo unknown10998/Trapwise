@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { achievementDefinitions, type AchievementDefinition } from "@/lib/achievementEngine";
 import { readDemoProfile } from "@/lib/demoMode";
+import { useAuth } from "@/components/AuthProvider";
 
 type Filter = "all" | "unlocked" | "in-progress" | "locked";
 const categorySections = [
@@ -16,18 +17,19 @@ const categorySections = [
 ] as const;
 
 export default function AchievementsPage() {
+  const { dataScope } = useAuth();
   const [filter, setFilter] = useState<Filter>("all");
   const [demoKeys, setDemoKeys] = useState<string[]>([]);
   const [demoActive, setDemoActive] = useState(false);
 
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => {
-      const demo = readDemoProfile();
+      const demo = readDemoProfile(dataScope);
       setDemoKeys(demo?.achievementKeys ?? []);
       setDemoActive(Boolean(demo?.enabled));
     });
     return () => window.cancelAnimationFrame(frame);
-  }, []);
+  }, [dataScope]);
 
   const summary = useMemo(() => ({
     unlocked: achievementDefinitions.filter((achievement) => demoKeys.includes(achievement.key)).length,

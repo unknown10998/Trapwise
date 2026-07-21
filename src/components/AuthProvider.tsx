@@ -3,6 +3,8 @@
 import { createContext, useContext, useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import type { User } from "@supabase/supabase-js";
 import { getSupabaseBrowserClient, isSupabaseConfigured } from "@/lib/supabase/client";
+import type { DataScope } from "@/lib/storage";
+import { resetGuestAccount as clearGuestAccount } from "@/lib/guestAccount";
 
 const GUEST_SESSION_KEY = "guest-session-v1";
 const guestListeners = new Set<() => void>();
@@ -14,8 +16,8 @@ function setGuestSession(active: boolean) {
   else window.localStorage.removeItem(GUEST_SESSION_KEY);
   guestListeners.forEach((listener) => listener());
 }
-type AuthState = { user: User | null; loading: boolean; configured: boolean; guestMode: boolean; continueAsGuest: () => void; signOut: () => Promise<void> };
-const AuthContext = createContext<AuthState>({ user: null, loading: true, configured: false, guestMode: false, continueAsGuest: () => undefined, signOut: async () => undefined });
+type AuthState = { user: User | null; loading: boolean; configured: boolean; guestMode: boolean; dataScope: DataScope; continueAsGuest: () => void; resetGuestAccount: () => void; signOut: () => Promise<void> };
+const AuthContext = createContext<AuthState>({ user: null, loading: true, configured: false, guestMode: false, dataScope: "guest", continueAsGuest: () => undefined, resetGuestAccount: () => undefined, signOut: async () => undefined });
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -51,8 +53,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     loading,
     configured: isSupabaseConfigured(),
     guestMode,
+    dataScope: user ? `user:${user.id}` as const : "guest" as const,
     continueAsGuest: () => {
       setGuestSession(true);
+    },
+    resetGuestAccount: () => {
+      clearGuestAccount();
+      setGuestSession(false);
     },
     signOut: async () => {
       setGuestSession(false);

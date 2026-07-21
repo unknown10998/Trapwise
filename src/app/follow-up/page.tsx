@@ -7,7 +7,8 @@ import { sampleQuestions } from "@/data/sampleQuestions";
 import type { DiagnosticStopReason } from "@/lib/adaptiveEngine";
 import { patternStrength, savePatternImpact } from "@/lib/mistakeTwinProgress";
 import { playCorrectAnswerSound } from "@/lib/sounds";
-import { readFromStorage, writeToStorage } from "@/lib/storage";
+import { readScopedFromStorage, scopedDataKey, writeToStorage } from "@/lib/storage";
+import { useAuth } from "@/components/AuthProvider";
 import type { AnswerChoiceId, AnswerRecord } from "@/types/question";
 
 const question = sampleQuestions.find((item) => item.id === "systems-nonlinear-011")!;
@@ -15,38 +16,40 @@ type SavedDiagnostic = { records: AnswerRecord[]; stopReason: DiagnosticStopReas
 type SavedFollowUp = { complete: boolean; choice: AnswerChoiceId; change: number; diagnosticFingerprint: string };
 const FOLLOW_UP_KEY = "follow-up-v1";
 
-function currentFingerprint() {
-  const records = readFromStorage<SavedDiagnostic>("adaptive-diagnostic", { records: [], stopReason: null }).records;
+function currentFingerprint(scope: Parameters<typeof scopedDataKey>[0]) {
+  const records = readScopedFromStorage<SavedDiagnostic>(scope, "adaptive-diagnostic", { records: [], stopReason: null }).records;
   return records.map((record) => `${record.questionId}:${record.selectedChoice}`).join("|");
 }
 
 export default function FollowUpPage() {
+  const { dataScope, loading } = useAuth();
   const [choice, setChoice] = useState<AnswerChoiceId | null>(null);
   const [complete, setComplete] = useState(false);
   const [change, setChange] = useState<number | null>(null);
   const correct = choice === question.correctAnswer;
 
   useEffect(() => {
+    if (loading) return;
     const frame = window.requestAnimationFrame(() => {
-      const saved = readFromStorage<SavedFollowUp | null>(FOLLOW_UP_KEY, null);
-      if (!saved || saved.diagnosticFingerprint !== currentFingerprint()) return;
+      const saved = readScopedFromStorage<SavedFollowUp | null>(dataScope, FOLLOW_UP_KEY, null);
+      if (!saved || saved.diagnosticFingerprint !== currentFingerprint(dataScope)) return;
       setChoice(saved.choice);
       setChange(saved.change);
       setComplete(saved.complete);
     });
     return () => window.cancelAnimationFrame(frame);
-  }, []);
+  }, [dataScope, loading]);
 
   function check() {
     if (!choice || complete) return;
     if (correct) playCorrectAnswerSound();
-    const records = readFromStorage<SavedDiagnostic>("adaptive-diagnostic", { records: [], stopReason: null }).records;
+    const records = readScopedFromStorage<SavedDiagnostic>(dataScope, "adaptive-diagnostic", { records: [], stopReason: null }).records;
     const latestMistake = [...records].reverse().find((record) => !record.isCorrect)?.mistakeCategory ?? "solved_wrong_value";
     const before = patternStrength(records, latestMistake);
     const after = patternStrength(records, latestMistake, correct ? 1 : 0);
-    savePatternImpact({ category: latestMistake, before, afterFollowUp: after, afterForge: null, skill: question.primarySkill, followUpCorrect: correct, forgeRecognized: null });
+    savePatternImpact({ category: latestMistake, before, afterFollowUp: after, afterForge: null, skill: question.primarySkill, followUpCorrect: correct, forgeRecognized: null }, dataScope);
     const nextChange = before - after;
-    writeToStorage<SavedFollowUp>(FOLLOW_UP_KEY, { complete: true, choice, change: nextChange, diagnosticFingerprint: currentFingerprint() });
+    writeToStorage<SavedFollowUp>(scopedDataKey(dataScope, FOLLOW_UP_KEY), { complete: true, choice, change: nextChange, diagnosticFingerprint: currentFingerprint(dataScope) });
     setChange(nextChange);
     setComplete(true);
   }

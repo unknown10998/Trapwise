@@ -9,9 +9,10 @@ import { fixedDiagnosticQuestions, sampleQuestions } from "@/data/sampleQuestion
 import { estimateMastery, getAdaptiveDecision, getMistakeCounts, getSkillPerformance, type DiagnosticStopReason } from "@/lib/adaptiveEngine";
 import { buildDiagnosticReport } from "@/lib/diagnosticReport";
 import { localDate, readProgressHistory, saveProgressHistory } from "@/lib/dailyPractice";
-import { readFromStorage, writeToStorage } from "@/lib/storage";
+import { readScopedFromStorage, scopedDataKey, writeToStorage } from "@/lib/storage";
 import { playCorrectAnswerSound } from "@/lib/sounds";
 import { startDemoMode } from "@/lib/demoMode";
+import { useAuth } from "@/components/AuthProvider";
 import type { AnswerChoiceId, AnswerRecord, Confidence, SATQuestion } from "@/types/question";
 
 type SavedDiagnostic = { records: AnswerRecord[]; stopReason: DiagnosticStopReason | null };
@@ -24,6 +25,7 @@ const confidenceOptions: { value: Exclude<Confidence, null>; label: string }[] =
 ];
 
 export default function DiagnosticPage() {
+  const { dataScope, loading } = useAuth();
   const router = useRouter();
   const [selectedChoice, setSelectedChoice] = useState<AnswerChoiceId | null>(null);
   const [confidence, setConfidence] = useState<Confidence>(null);
@@ -44,7 +46,7 @@ export default function DiagnosticPage() {
         return;
       }
 
-      const saved = readFromStorage<SavedDiagnostic>("adaptive-diagnostic", { records: [], stopReason: null });
+      const saved = readScopedFromStorage<SavedDiagnostic>(dataScope, "adaptive-diagnostic", { records: [], stopReason: null });
       if (saved.stopReason) {
         router.replace("/results");
         return;
@@ -73,13 +75,15 @@ export default function DiagnosticPage() {
       }
     });
     return () => window.cancelAnimationFrame(frame);
-  }, [router]);
+  }, [dataScope, router]);
+
+  if (loading) return <main className="mx-auto max-w-4xl px-4 py-10"><h1 className="text-2xl font-bold">Checking your practice data</h1></main>;
 
   function finishDiagnostic(updatedRecords: AnswerRecord[], stopReason: DiagnosticStopReason) {
-    writeToStorage<SavedDiagnostic>("adaptive-diagnostic", { records: updatedRecords, stopReason });
+    writeToStorage<SavedDiagnostic>(scopedDataKey(dataScope, "adaptive-diagnostic"), { records: updatedRecords, stopReason });
     const report = buildDiagnosticReport(updatedRecords, stopReason);
     const sessionId = `diagnostic-${localDate()}-${updatedRecords[0]?.questionId ?? "session"}`;
-    const history = readProgressHistory();
+    const history = readProgressHistory(dataScope);
     if (!history.sessions.some((session) => session.sessionId === sessionId)) {
       const difficultyPerformance = updatedRecords.reduce<Record<number, { correct: number; total: number }>>((result, record) => {
         const current = result[record.difficultyLevel] ?? { correct: 0, total: 0 };
@@ -96,7 +100,7 @@ export default function DiagnosticPage() {
         accuracy: report.accuracy, masteryBefore: updatedRecords[0]?.masteryBefore ?? 50, masteryAfter: report.mastery,
         masteryChange: report.mastery - (updatedRecords[0]?.masteryBefore ?? 50), strongestSkill: report.strongestSkill, weakestSkill: report.weakestSkill,
         dominantMistake: report.mostCommonMistake, difficultyPerformance, confidencePerformance, correctedMistakes: 0, questionIds: updatedRecords.map((record) => record.questionId), visualPerformance: { answered: visualAnswers.length, correct: visualAnswers.filter((record) => record.isCorrect).length, visualMisinterpretations: visualAnswers.filter((record) => record.mistakeCategory === "visual_misinterpretation").length, byCategory: visualPerformance },
-      }] });
+      }] }, dataScope);
     }
     router.push("/results");
   }
@@ -127,7 +131,7 @@ export default function DiagnosticPage() {
     nextRecord.masteryAfter = estimateMastery(provisionalRecords);
     const updatedRecords = [...records, nextRecord];
     setRecords(updatedRecords);
-    writeToStorage<SavedDiagnostic>("adaptive-diagnostic", { records: updatedRecords, stopReason: null });
+    writeToStorage<SavedDiagnostic>(scopedDataKey(dataScope, "adaptive-diagnostic"), { records: updatedRecords, stopReason: null });
 
     if (updatedRecords.length < fixedDiagnosticQuestions.length) {
       setQuestion(fixedDiagnosticQuestions[updatedRecords.length]);
@@ -170,7 +174,7 @@ export default function DiagnosticPage() {
     setSelectedChoice(previous.selectedChoice);
     setConfidence(previous.confidence);
     setSelectionNote("You can change this saved answer before continuing.");
-    writeToStorage<SavedDiagnostic>("adaptive-diagnostic", { records: remaining, stopReason: null });
+    writeToStorage<SavedDiagnostic>(scopedDataKey(dataScope, "adaptive-diagnostic"), { records: remaining, stopReason: null });
   }
 
   return (

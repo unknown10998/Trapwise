@@ -5,6 +5,7 @@ import { AuthProvider } from "@/components/AuthProvider";
 import { Onboarding } from "@/components/Onboarding";
 import { RouteLoadingGlint } from "@/components/RouteLoadingGlint";
 import { JudgeDemoProgress } from "@/components/JudgeDemoProgress";
+import { ThemeController } from "@/components/ThemeSettings";
 import { OfflineStatus } from "@/components/OfflineStatus";
 import "./globals.css";
 
@@ -20,7 +21,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body><a className="skip-link" href="#main-content">Skip to main content</a><AuthProvider><Header /><OfflineStatus /><JudgeDemoProgress /><Onboarding /><div id="main-content" className="theme-page-canvas" tabIndex={-1}><RouteLoadingGlint>{children}</RouteLoadingGlint></div><BrandFooter /></AuthProvider></body>
+      <body><a className="skip-link" href="#main-content">Skip to main content</a><AuthProvider><ThemeController /><Header /><OfflineStatus /><JudgeDemoProgress /><Onboarding /><div id="main-content" className="theme-page-canvas" tabIndex={-1}><RouteLoadingGlint>{children}</RouteLoadingGlint></div><BrandFooter /></AuthProvider></body>
     </html>
   );
 }

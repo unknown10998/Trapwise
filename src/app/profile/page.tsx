@@ -17,7 +17,7 @@ const empty: Snapshot = { demo: null, history: { version: 1, sessions: [] } };
 const emptyDetails: ProfileDetails = { name: "", description: "" };
 
 export default function ProfilePage() {
-  const { configured, user, guestMode } = useAuth();
+  const { configured, user, guestMode, dataScope, loading } = useAuth();
   const [snapshot, setSnapshot] = useState(empty);
   const [details, setDetails] = useState(emptyDetails);
   const [draftName, setDraftName] = useState("");
@@ -31,7 +31,7 @@ export default function ProfilePage() {
   useEffect(() => {
     hydratedProfileKey.current = null;
     const frame = window.requestAnimationFrame(() => {
-      setSnapshot({ demo: readDemoProfile(), history: readProgressHistory() });
+      setSnapshot({ demo: readDemoProfile(dataScope), history: readProgressHistory(dataScope) });
       const savedDetails = readFromStorage<ProfileDetails>(profileKey, emptyDetails);
       const accountName = String(user?.user_metadata.display_name ?? "").trim();
       const accountDescription = String(user?.user_metadata.profile_description ?? "").trim();
@@ -48,13 +48,14 @@ export default function ProfilePage() {
       hydratedProfileKey.current = profileKey;
     });
     return () => window.cancelAnimationFrame(frame);
-  }, [draftKey, profileKey, user]);
+  }, [dataScope, draftKey, profileKey, user]);
 
   useEffect(() => {
     if (hydratedProfileKey.current !== profileKey) return;
     writeToStorage<ProfileDetails>(draftKey, { name: draftName, description: draftDescription });
   }, [draftDescription, draftKey, draftName, profileKey]);
 
+  if (loading) return <main className="mx-auto max-w-3xl px-4 py-10"><h1 className="text-2xl font-bold">Checking your profile</h1></main>;
   const demo = snapshot.demo?.enabled ? snapshot.demo : null;
   const latest = snapshot.history.sessions.at(-1);
   const streak = getStreak(snapshot.history);

@@ -3,6 +3,7 @@
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { readDemoProfile } from "@/lib/demoMode";
+import { useAuth } from "@/components/AuthProvider";
 
 const steps = [
   { route: "/diagnostic", label: "Diagnostic" },
@@ -14,14 +15,16 @@ const steps = [
 
 export function JudgeDemoProgress() {
   const pathname = usePathname();
+  const { dataScope, loading } = useAuth();
   const [active, setActive] = useState(false);
 
   useEffect(() => {
-    const frame = window.requestAnimationFrame(() => setActive(Boolean(readDemoProfile()?.enabled)));
+    const frame = window.requestAnimationFrame(() => setActive(Boolean(readDemoProfile(dataScope)?.enabled)));
     return () => window.cancelAnimationFrame(frame);
-  }, [pathname]);
+  }, [dataScope, pathname]);
 
   const stepIndex = steps.findIndex((step) => step.route === pathname);
+  if (loading) return null;
   if (!active || stepIndex < 0) return null;
 
   const step = steps[stepIndex];

@@ -105,6 +105,7 @@ button {
 :root[data-theme="tilt"] .brand-logo-image { filter: hue-rotate(0deg) saturate(1.45) brightness(1.08) drop-shadow(0 2px 4px color-mix(in srgb, var(--accent) 48%, transparent)); }
 .theme-gear { border-color: var(--line); background: var(--surface); box-shadow: 2px 2px 0 var(--accent-soft); transition: transform 160ms ease; }
 .theme-gear:hover { transform: rotate(35deg) scale(1.04); }
+.theme-settings-panel { border-color: var(--line); background: var(--surface); color: var(--foreground); }
 .theme-menu { border-color: var(--line); background: var(--surface); color: var(--foreground); animation: theme-pop 180ms ease-out; }
 .theme-close { background: var(--accent-soft); color: var(--foreground); }
 .theme-option { color: var(--foreground); transition: background 160ms ease, transform 160ms ease; }

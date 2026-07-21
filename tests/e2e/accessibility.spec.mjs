@@ -11,15 +11,15 @@ for (const route of routes) {
   });
 }
 
-test("keyboard can reveal and use the skip link and close theme settings", async ({ page }) => {
+test("keyboard can reveal the skip link and open settings from the gear link", async ({ page }) => {
+  await page.addInitScript(() => window.localStorage.setItem("guest-session-v1", "active"));
   await page.goto("/");
   await page.keyboard.press("Tab");
   await expect(page.getByRole("link", { name: "Skip to main content" })).toBeFocused();
   await page.keyboard.press("Enter");
   await expect(page.locator("#main-content")).toBeFocused();
-  await page.getByRole("button", { name: "Choose a Trapwise theme" }).click();
-  await expect(page.getByRole("dialog", { name: "Theme settings" })).toBeVisible();
-  await page.keyboard.press("Escape");
-  await expect(page.getByRole("dialog", { name: "Theme settings" })).toBeHidden();
-  await expect(page.getByRole("button", { name: "Choose a Trapwise theme" })).toBeFocused();
+  await page.getByRole("link", { name: "Open settings" }).click();
+  await expect(page).toHaveURL(/\/settings$/);
+  await expect(page.getByRole("heading", { name: "Study atmosphere" })).toBeVisible();
+  await expect(page.getByRole("slider", { name: "Celebration volume" })).toBeVisible();
 });

@@ -4,28 +4,31 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { getStreak, localDate, readDailySession, readProgressHistory } from "@/lib/dailyPractice";
 import { readDemoProfile, type DemoProfile } from "@/lib/demoMode";
-import { subscribeToStorage } from "@/lib/storage";
+import { scopedDataKey, subscribeToStorage } from "@/lib/storage";
+import { useAuth } from "@/components/AuthProvider";
 
 type Status = { demo: DemoProfile | null; streak: number; bestStreak: number; completedToday: boolean; sessions: number };
 const emptyStatus: Status = { demo: null, streak: 0, bestStreak: 0, completedToday: false, sessions: 0 };
 
 export function HomeLearningStatus() {
+  const { dataScope, loading } = useAuth();
   const [status, setStatus] = useState(emptyStatus);
 
   useEffect(() => {
     const refresh = () => {
-      const history = readProgressHistory();
+      const history = readProgressHistory(dataScope);
       const streak = getStreak(history);
-      const session = readDailySession();
-      setStatus({ demo: readDemoProfile(), streak: streak.active, bestStreak: streak.longest, completedToday: session?.date === localDate() && session.isComplete, sessions: history.sessions.length });
+      const session = readDailySession(dataScope);
+      setStatus({ demo: readDemoProfile(dataScope), streak: streak.active, bestStreak: streak.longest, completedToday: session?.date === localDate() && session.isComplete, sessions: history.sessions.length });
     };
     const frame = window.requestAnimationFrame(refresh);
-    const unsubscribeHistory = subscribeToStorage("progress-history-v1", refresh);
-    const unsubscribeDaily = subscribeToStorage("daily-session-v1", refresh);
-    const unsubscribeDemo = subscribeToStorage("demo-profile-v1", refresh);
+    const unsubscribeHistory = subscribeToStorage(scopedDataKey(dataScope, "progress-history-v1"), refresh);
+    const unsubscribeDaily = subscribeToStorage(scopedDataKey(dataScope, "daily-session-v1"), refresh);
+    const unsubscribeDemo = subscribeToStorage(scopedDataKey(dataScope, "demo-profile-v1"), refresh);
     return () => { window.cancelAnimationFrame(frame); unsubscribeHistory(); unsubscribeDaily(); unsubscribeDemo(); };
-  }, []);
+  }, [dataScope]);
 
+  if (loading) return null;
   const demo = status.demo?.enabled ? status.demo : null;
   return <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm" aria-label="Learning status">
     <div className="flex flex-wrap items-start justify-between gap-3"><div><p className="text-sm font-semibold uppercase text-emerald-700">Your learning rhythm</p><h2 className="mt-1 text-xl font-bold text-slate-950">{status.completedToday ? "Today’s practice is complete." : "A short practice set is ready when you are."}</h2></div>{demo && <span className="rounded-full bg-indigo-50 px-3 py-1 text-sm font-bold text-indigo-900">Level {demo.level} · {demo.xp} XP</span>}</div>

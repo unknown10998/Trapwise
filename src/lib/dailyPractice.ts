@@ -1,7 +1,7 @@
 import { sampleQuestions } from "@/data/sampleQuestions";
 import { buildDiagnosticReport } from "@/lib/diagnosticReport";
 import { getMistakeCounts, getSkillPerformance } from "@/lib/adaptiveEngine";
-import { writeToStorage } from "@/lib/storage";
+import { readFromStorage, scopedDataKey, writeToStorage, type DataScope } from "@/lib/storage";
 import type { AnswerRecord, DifficultyLevel, SATQuestion } from "@/types/question";
 import type { MistakeCategory } from "@/types/mistake";
 import type { DailyPracticeSession, ProgressHistory, ProgressRecord } from "@/types/progress";
@@ -15,29 +15,52 @@ export function localDate(date = new Date()) {
   return new Date(date.getTime() - offset).toISOString().slice(0, 10);
 }
 
-export function readProgressHistory(): ProgressHistory {
+function validHistory(value: ProgressHistory | null): ProgressHistory | null {
+  return value?.version === 1 && Array.isArray(value.sessions) ? value : null;
+}
+
+export function readProgressHistory(scope: DataScope = "guest"): ProgressHistory {
   if (typeof window === "undefined") return { version: 1, sessions: [] };
   try {
-    const value = window.localStorage.getItem(`trapwise:${HISTORY_KEY}`);
-    const parsed = value ? (JSON.parse(value) as ProgressHistory) : null;
-    return parsed?.version === 1 && Array.isArray(parsed.sessions) ? parsed : { version: 1, sessions: [] };
+    const scoped = validHistory(readFromStorage<ProgressHistory | null>(scopedDataKey(scope, HISTORY_KEY), null));
+    if (scoped) return scoped;
+    // Migrate pre-scope local practice into the guest bucket only. It is never used for a signed-in account.
+    if (scope === "guest") {
+      const legacyValue = window.localStorage.getItem("trapwise:progress-history-v1");
+      const legacy = validHistory(legacyValue ? (JSON.parse(legacyValue) as ProgressHistory) : null);
+      if (legacy) {
+        writeToStorage(scopedDataKey("guest", HISTORY_KEY), legacy);
+        return legacy;
+      }
+    }
+    return { version: 1, sessions: [] };
   } catch {
     return { version: 1, sessions: [] };
   }
 }
 
-export function saveProgressHistory(history: ProgressHistory) {
+export function saveProgressHistory(history: ProgressHistory, scope: DataScope = "guest") {
   if (typeof window === "undefined") return;
-  const current = readProgressHistory();
+  const current = readProgressHistory(scope);
   const sessions = new Map(current.sessions.map((session) => [session.sessionId, session]));
   for (const session of history.sessions) sessions.set(session.sessionId, session);
-  writeToStorage(HISTORY_KEY, { version: 1, sessions: [...sessions.values()] });
+  writeToStorage(scopedDataKey(scope, HISTORY_KEY), { version: 1, sessions: [...sessions.values()] });
 }
 
-export function readDailySession(): DailyPracticeSession | null {
+export function readDailySession(scope: DataScope = "guest"): DailyPracticeSession | null {
   if (typeof window === "undefined") return null;
   try {
-    const value = window.localStorage.getItem(`trapwise:${DAILY_KEY}`);
+    const value = window.localStorage.getItem(`trapwise:${scopedDataKey(scope, DAILY_KEY)}`);
+    if (!value && scope === "guest") {
+      const legacyValue = window.localStorage.getItem(`trapwise:${DAILY_KEY}`);
+      if (legacyValue) {
+        const legacy = JSON.parse(legacyValue) as DailyPracticeSession;
+        if (Array.isArray(legacy.selectedQuestionIds) && Array.isArray(legacy.answers)) {
+          writeToStorage(scopedDataKey("guest", DAILY_KEY), legacy);
+          return legacy;
+        }
+      }
+    }
     const parsed = value ? (JSON.parse(value) as DailyPracticeSession) : null;
     return parsed && Array.isArray(parsed.selectedQuestionIds) && Array.isArray(parsed.answers) ? parsed : null;
   } catch {
@@ -45,8 +68,8 @@ export function readDailySession(): DailyPracticeSession | null {
   }
 }
 
-export function saveDailySession(session: DailyPracticeSession) {
-  writeToStorage(DAILY_KEY, session);
+export function saveDailySession(session: DailyPracticeSession, scope: DataScope = "guest") {
+  writeToStorage(scopedDataKey(scope, DAILY_KEY), session);
 }
 
 function hash(value: string) {

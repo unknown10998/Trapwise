@@ -5,7 +5,8 @@ import { useEffect, useState } from "react";
 import { evaluateLocalTrap, type LocalTrapEvaluation } from "@/lib/localTrapEvaluator";
 import { fictionalDemoProfile, readDemoProfile } from "@/lib/demoMode";
 import { readPatternImpact, savePatternImpact } from "@/lib/mistakeTwinProgress";
-import { readFromStorage, writeToStorage } from "@/lib/storage";
+import { readScopedFromStorage, scopedDataKey, writeToStorage } from "@/lib/storage";
+import { useAuth } from "@/components/AuthProvider";
 
 type SavedForge = {
   complete: boolean;
@@ -24,6 +25,7 @@ function Score({ label, value }: { label: string; value: number }) {
 }
 
 export default function TrapForgePage() {
+  const { dataScope, loading } = useAuth();
   const [distractor, setDistractor] = useState("");
   const [explanation, setExplanation] = useState("");
   const [complete, setComplete] = useState(false);
@@ -33,18 +35,19 @@ export default function TrapForgePage() {
   const [evaluation, setEvaluation] = useState<LocalTrapEvaluation | null>(null);
 
   useEffect(() => {
+    if (loading) return;
     const frame = window.requestAnimationFrame(() => {
-      const saved = readFromStorage<SavedForge>(FORGE_KEY, EMPTY_FORGE);
+      const saved = readScopedFromStorage<SavedForge>(dataScope, FORGE_KEY, EMPTY_FORGE);
       const hasForgeDraft = typeof saved.distractor === "string" && typeof saved.explanation === "string";
       setDistractor(hasForgeDraft ? saved.distractor ?? "" : "");
       setExplanation(hasForgeDraft ? saved.explanation ?? "" : "");
       setEvaluation(hasForgeDraft ? saved.evaluation ?? null : null);
       setComplete(Boolean(hasForgeDraft && saved.complete && saved.evaluation?.isValidTrap));
       setRewarded(Boolean(hasForgeDraft && saved.rewarded));
-      setDemoActive(Boolean(readDemoProfile()?.enabled));
+      setDemoActive(Boolean(readDemoProfile(dataScope)?.enabled));
     });
     return () => window.cancelAnimationFrame(frame);
-  }, []);
+  }, [dataScope, loading]);
 
   function checkForge() {
     if (complete) return;
@@ -58,25 +61,25 @@ export default function TrapForgePage() {
       expectedTrap: "2",
       requiredReasoningTerms: ["x", "y"],
     });
-    const storedForge = readFromStorage<SavedForge>(FORGE_KEY, EMPTY_FORGE);
+    const storedForge = readScopedFromStorage<SavedForge>(dataScope, FORGE_KEY, EMPTY_FORGE);
     const prior = typeof storedForge.distractor === "string" && typeof storedForge.explanation === "string" ? storedForge : EMPTY_FORGE;
     const shouldAward = demoActive && nextEvaluation.isValidTrap && !prior.rewarded;
     const isComplete = nextEvaluation.isValidTrap;
 
     if (isComplete) {
-      const impact = readPatternImpact();
+      const impact = readPatternImpact(dataScope);
       if (impact) {
         savePatternImpact({
           ...impact,
           afterForge: Math.max(0, (impact.afterFollowUp ?? impact.before) - 8),
           forgeRecognized: true,
-        });
+        }, dataScope);
       }
     }
 
     if (shouldAward) {
-      const profile = readDemoProfile() ?? fictionalDemoProfile;
-      writeToStorage("demo-profile-v1", {
+      const profile = readDemoProfile(dataScope) ?? fictionalDemoProfile;
+      writeToStorage(scopedDataKey(dataScope, "demo-profile-v1"), {
         ...profile,
         xp: profile.xp + 20,
         trapForgeRounds: profile.trapForgeRounds + 1,
@@ -91,7 +94,7 @@ export default function TrapForgePage() {
       evaluation: nextEvaluation,
       rewarded: prior.rewarded || shouldAward,
     };
-    writeToStorage(FORGE_KEY, savedForge);
+    writeToStorage(scopedDataKey(dataScope, FORGE_KEY), savedForge);
     setEvaluation(nextEvaluation);
     setRewarded(savedForge.rewarded);
     setAwardedThisAttempt(shouldAward);

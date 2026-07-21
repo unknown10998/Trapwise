@@ -1,5 +1,17 @@
 const storagePrefix = "trapwise";
 
+export type DataScope = "guest" | `user:${string}`;
+
+export function scopedDataKey(scope: DataScope, key: string) {
+  return `data:${scope}:${key}`;
+}
+
+export function readScopedFromStorage<T>(scope: DataScope, key: string, fallback: T): T {
+  const scoped = readFromStorage<T | null>(scopedDataKey(scope, key), null);
+  if (scoped !== null) return scoped;
+  return scope === "guest" ? readFromStorage(key, fallback) : fallback;
+}
+
 export function getStorageKey(key: string) {
   return `${storagePrefix}:${key}`;
 }

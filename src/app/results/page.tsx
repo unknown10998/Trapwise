@@ -8,6 +8,8 @@ import { MistakeTwinReveal } from "@/components/MistakeTwinReveal";
 import { sampleQuestions } from "@/data/sampleQuestions";
 import { buildDiagnosticReport, getQuestionReview } from "@/lib/diagnosticReport";
 import { writeToStorage } from "@/lib/storage";
+import { scopedDataKey, type DataScope } from "@/lib/storage";
+import { useAuth } from "@/components/AuthProvider";
 import { buildMistakeTwinProfile } from "@/lib/mistakeTwinEngine";
 import { patternStrength } from "@/lib/mistakeTwinProgress";
 import type { AnswerRecord } from "@/types/question";
@@ -17,11 +19,14 @@ type SavedDiagnostic = { records: AnswerRecord[]; stopReason: DiagnosticStopReas
 const EMPTY_DIAGNOSTIC: SavedDiagnostic = { records: [], stopReason: null };
 let cachedDiagnosticValue: string | null | undefined;
 let cachedDiagnosticSnapshot: SavedDiagnostic = EMPTY_DIAGNOSTIC;
+let cachedDiagnosticScope: DataScope | null = null;
 
-function getDiagnosticSnapshot(): SavedDiagnostic {
-  const storedValue = window.localStorage.getItem("trapwise:adaptive-diagnostic");
-  if (storedValue === cachedDiagnosticValue) return cachedDiagnosticSnapshot;
+function getDiagnosticSnapshot(scope: DataScope): SavedDiagnostic {
+  const scopedKey = `trapwise:${scopedDataKey(scope, "adaptive-diagnostic")}`;
+  const storedValue = window.localStorage.getItem(scopedKey) ?? (scope === "guest" ? window.localStorage.getItem("trapwise:adaptive-diagnostic") : null);
+  if (storedValue === cachedDiagnosticValue && scope === cachedDiagnosticScope) return cachedDiagnosticSnapshot;
   cachedDiagnosticValue = storedValue;
+  cachedDiagnosticScope = scope;
   try {
     cachedDiagnosticSnapshot = storedValue ? (JSON.parse(storedValue) as SavedDiagnostic) : EMPTY_DIAGNOSTIC;
   } catch {
@@ -31,11 +36,13 @@ function getDiagnosticSnapshot(): SavedDiagnostic {
 }
 
 export default function ResultsPage() {
+  const { dataScope, loading } = useAuth();
   const saved = useSyncExternalStore(
     () => () => undefined,
-    getDiagnosticSnapshot,
+    () => loading ? EMPTY_DIAGNOSTIC : getDiagnosticSnapshot(dataScope),
     () => EMPTY_DIAGNOSTIC,
   );
+  if (loading) return <main className="mx-auto max-w-3xl px-4 py-10"><h1 className="text-2xl font-bold">Checking your results</h1></main>;
   if (saved.records.length === 0) return <EmptyResults />;
 
   const report = buildDiagnosticReport(saved.records, saved.stopReason ?? "no_safe_question_available");
@@ -92,7 +99,7 @@ export default function ResultsPage() {
             <Link href="/trap-forge" className="inline-flex min-h-11 items-center justify-center rounded-md border border-indigo-300 px-4 py-2 font-semibold text-indigo-800 hover:bg-indigo-50">Open Trap Forge</Link>
             <Link
               href="/diagnostic"
-              onClick={() => writeToStorage<SavedDiagnostic>("adaptive-diagnostic", { records: [], stopReason: null })}
+              onClick={() => writeToStorage<SavedDiagnostic>(scopedDataKey(dataScope, "adaptive-diagnostic"), { records: [], stopReason: null })}
               className="inline-flex min-h-11 items-center justify-center rounded-md border border-slate-300 px-4 py-2 font-semibold text-slate-800 hover:bg-slate-50"
             >
               Restart Diagnostic

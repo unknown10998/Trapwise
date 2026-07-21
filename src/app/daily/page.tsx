@@ -6,8 +6,9 @@ import { ProgressBar } from "@/components/ProgressBar";
 import { QuestionCard } from "@/components/QuestionCard";
 import { sampleQuestions } from "@/data/sampleQuestions";
 import { buildDailyProgressRecord, createDailyPracticeSession, getStreak, localDate, readDailySession, readProgressHistory, saveDailySession, saveProgressHistory } from "@/lib/dailyPractice";
-import { readFromStorage } from "@/lib/storage";
+import { readScopedFromStorage } from "@/lib/storage";
 import { queueProgressForSync } from "@/lib/cloudSync";
+import { useAuth } from "@/components/AuthProvider";
 import { playCorrectAnswerSound } from "@/lib/sounds";
 import type { AnswerRecord, AnswerChoiceId, Confidence } from "@/types/question";
 import type { DailyAnswer, DailyPracticeSession, ProgressHistory } from "@/types/progress";
@@ -20,6 +21,7 @@ const confidenceOptions: { value: Exclude<Confidence, null>; label: string }[] =
 function getQuestion(id: string) { return sampleQuestions.find((question) => question.id === id); }
 
 export default function DailyPage() {
+  const { dataScope, loading } = useAuth();
   const [session, setSession] = useState<DailyPracticeSession | null>(null);
   const [history, setHistory] = useState<ProgressHistory>({ version: 1, sessions: [] });
   const [index, setIndex] = useState(0);
@@ -30,17 +32,18 @@ export default function DailyPage() {
   const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
+    if (loading) return;
     let active = true;
     const timeout = window.setTimeout(() => { if (active) setPreparation("error"); }, 1800);
     const frame = window.requestAnimationFrame(() => {
       try {
-        const currentHistory = readProgressHistory();
-        const existing = readDailySession();
+        const currentHistory = readProgressHistory(dataScope);
+        const existing = readDailySession(dataScope);
         const today = localDate();
-        const diagnostic = readFromStorage<SavedDiagnostic>("adaptive-diagnostic", { records: [] });
+        const diagnostic = readScopedFromStorage<SavedDiagnostic>(dataScope, "adaptive-diagnostic", { records: [] });
         const nextSession = existing?.date === today ? existing : createDailyPracticeSession({ diagnosticRecords: diagnostic.records, history: currentHistory, date: today });
         if (!nextSession?.selectedQuestionIds.length) throw new Error("No local practice questions were available.");
-        if (nextSession !== existing) saveDailySession(nextSession);
+        if (nextSession !== existing) saveDailySession(nextSession, dataScope);
         if (!active) return;
         setHistory(currentHistory); setSession(nextSession); setIndex(nextSession.answers.length); setPreparation("ready");
       } catch {
@@ -49,12 +52,12 @@ export default function DailyPage() {
           const fallback = createDailyPracticeSession({ diagnosticRecords: [], history: fallbackHistory, date: localDate(), availableQuestions: sampleQuestions });
           if (!fallback.selectedQuestionIds.length) throw new Error("No fallback questions were available.");
           if (!active) return;
-          saveDailySession(fallback); setHistory(fallbackHistory); setSession(fallback); setIndex(0); setPreparation("fallback");
+          saveDailySession(fallback, dataScope); setHistory(fallbackHistory); setSession(fallback); setIndex(0); setPreparation("fallback");
         } catch { if (active) setPreparation("error"); }
       } finally { window.clearTimeout(timeout); }
     });
     return () => { active = false; window.clearTimeout(timeout); window.cancelAnimationFrame(frame); };
-  }, [attempt]);
+  }, [attempt, dataScope, loading]);
 
   if (!session) return <main className="mx-auto max-w-4xl px-4 py-10 sm:px-6 lg:px-8"><p role="status" className="text-slate-600">{preparation === "error" ? "Unable to prepare today’s local practice." : "Preparing today’s practice…"}</p>{preparation === "error" && <div className="mt-5 flex gap-3"><button type="button" onClick={() => { setPreparation("preparing"); setAttempt((value) => value + 1); }} className="rounded-md bg-emerald-600 px-4 py-2 font-semibold text-white">Retry</button><Link href="/" className="rounded-md border border-slate-300 px-4 py-2 font-semibold text-slate-800">Return home</Link></div>}</main>;
   const question = getQuestion(session.selectedQuestionIds[index]);
@@ -71,7 +74,7 @@ export default function DailyPage() {
     };
     const updated = { ...session, answers: [...session.answers, answer] };
     if (answer.isCorrect) playCorrectAnswerSound();
-    saveDailySession(updated); setSession(updated); setShowFeedback(true);
+    saveDailySession(updated, dataScope); setSession(updated); setShowFeedback(true);
   }
 
   function nextQuestion() {
@@ -80,7 +83,7 @@ export default function DailyPage() {
     const completed = { ...session, isComplete: true };
     const record = buildDailyProgressRecord(completed);
     const updatedHistory = history.sessions.some((item) => item.sessionId === record.sessionId) ? history : { ...history, sessions: [...history.sessions, record] };
-    queueProgressForSync(record); saveDailySession(completed); saveProgressHistory(updatedHistory); setHistory(updatedHistory); setSession(completed);
+    queueProgressForSync(record, dataScope); saveDailySession(completed, dataScope); saveProgressHistory(updatedHistory, dataScope); setHistory(updatedHistory); setSession(completed);
   }
 
   const answer = session.answers.at(-1);
